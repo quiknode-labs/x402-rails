@@ -28,7 +28,7 @@ module X402
 
       private
 
-      def render_payment_required(amount, chain, currency)
+      def generate_payment_required_response(amount, chain, currency, error_message = nil)
         requirement_response = X402::RequirementGenerator.generate(
           amount: amount,
           resource: request.original_url,
@@ -36,6 +36,12 @@ module X402
           chain: chain,
           currency: currency
         )
+        requirement_response[:error] = error_message if error_message
+        requirement_response
+      end
+
+      def render_payment_required(amount, chain, currency)
+        requirement_response = generate_payment_required_response(amount, chain, currency)
 
         # Detect if request is from browser or API client
         # if browser_request?
@@ -65,7 +71,8 @@ module X402
         validation_result = validator.validate(payment_payload, requirement)
 
         unless validation_result[:valid]
-          return render json: { error: validation_result[:error] }, status: :payment_required
+          requirement_response = generate_payment_required_response(amount, chain, currency, validation_result[:error])
+          return render json: requirement_response, status: :payment_required
         end
 
         # Store payment info and requirement in request environment
@@ -79,15 +86,24 @@ module X402
 
         # If non-optimistic mode, settle payment synchronously before continuing
         unless X402.configuration.optimistic
-          settle_payment_now
+          settlement_result = settle_payment_now
+
+          # If settlement failed, abort and return 402 with payment requirements
+          if settlement_result.nil? || !settlement_result.success?
+            error_message = settlement_result&.error_reason || "Settlement failed"
+            requirement_response = generate_payment_required_response(amount, chain, currency, "failed to settle payment: #{error_message}")
+            return render json: requirement_response, status: :payment_required
+          end
         end
 
         # Payment verified, continue with action
         # In optimistic mode, settlement will happen automatically via after_action callback
       rescue X402::InvalidPaymentError => e
-        render json: { error: "Invalid payment: #{e.message}" }, status: :payment_required
+        requirement_response = generate_payment_required_response(amount, chain, currency, "Invalid payment: #{e.message}")
+        render json: requirement_response, status: :payment_required
       rescue X402::FacilitatorError => e
-        render json: { error: "Verification error: #{e.message}" }, status: :payment_required
+        requirement_response = generate_payment_required_response(amount, chain, currency, "Verification error: #{e.message}")
+        render json: requirement_response, status: :payment_required
       end
 
       def settle_x402_payment_if_needed
@@ -136,8 +152,8 @@ module X402
             response.headers["X-PAYMENT-RESPONSE"] = settlement_result.to_base64
             ::Rails.logger.info("x402 settlement successful: #{settlement_result.transaction}")
           else
-            # Settlement failed - log error but don't break the response
-            # (user already got the service, we can't take it back)
+            # Settlement failed - in optimistic mode, user already got the service
+            # In non-optimistic mode, this will be caught before the response is sent
             ::Rails.logger.error("x402 settlement failed: #{settlement_result.error_reason}")
           end
 
