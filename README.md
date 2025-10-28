@@ -6,8 +6,9 @@ Accept instant blockchain micropayments in Rails applications using the [x402 pa
 
 - **1 line of code** to accept digital dollars (USDC)
 - **No fees** on supported networks (Base)
-- **~2 second** settlement times
+- **~1 second** response times (optimistic mode)
 - **$0.001 minimum** payment amounts
+- **Optimistic & non-optimistic** settlement modes
 - **Automatic settlement** after successful responses
 - **Browser paywall** and API support
 - **Rails 7.0+** compatible
@@ -38,6 +39,7 @@ X402.configure do |config|
   config.facilitator = "https://x402.org/facilitator"
   config.chain = "base-sepolia"  # or "base" for mainnet
   config.currency = "USDC"
+  config.optimistic = true  # Fast responses (default), false for guaranteed settlement
 end
 ```
 
@@ -117,12 +119,36 @@ Set defaults in `config/initializers/x402.rb`:
 
 ```ruby
 X402.configure do |config|
-  config.wallet_address = "0xYourAddress"      # Required: recipient address
-  config.facilitator = "https://x402.org/facilitator"  # Facilitator URL
-  config.chain = "base-sepolia"                 # Network to use
-  config.currency = "USDC"                      # Token symbol
+  # Required: Your wallet address where payments will be received
+  config.wallet_address = ENV['X402_WALLET_ADDRESS']
+
+  # Facilitator service URL (default: "https://x402.org/facilitator")
+  config.facilitator = "https://x402.org/facilitator"
+
+  # Blockchain network (default: "base-sepolia")
+  # Options: "base-sepolia", "base", "avalanche-fuji", "avalanche"
+  config.chain = "base-sepolia"
+
+  # Payment token (default: "USDC")
+  # Currently only USDC is supported
+  config.currency = "USDC"
+
+  # Optimistic mode (default: true)
+  # true: Fast response, settle payment after response is sent
+  # false: Wait for blockchain settlement before sending response
+  config.optimistic = true
 end
 ```
+
+### Configuration Attributes
+
+| Attribute | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `wallet_address` | **Yes** | - | Your Ethereum wallet address where payments will be received |
+| `facilitator` | No | `"https://x402.org/facilitator"` | Facilitator service URL for payment verification and settlement |
+| `chain` | No | `"base-sepolia"` | Blockchain network to use (`base-sepolia`, `base`, `avalanche-fuji`, `avalanche`) |
+| `currency` | No | `"USDC"` | Payment token symbol (currently only USDC supported) |
+| `optimistic` | No | `true` | Settlement mode (see Optimistic vs Non-Optimistic Mode below) |
 
 ### Per-Request Overrides
 
@@ -130,22 +156,126 @@ Override config for specific requests:
 
 ```ruby
 x402_paywall(
-  amount: 0.005,
-  chain: "base",           # Override chain
-  currency: "USDC"         # Override currency
+  amount: 0.005,           # Required: payment amount in USD
+  chain: "base",           # Optional: override chain
+  currency: "USDC"         # Optional: override currency
 )
+```
+
+### Optimistic vs Non-Optimistic Mode
+
+The gem supports two settlement modes that affect response timing and user experience:
+
+#### Optimistic Mode (Default: `true`)
+
+**Flow:**
+1. Verify payment signature (off-chain, ~100ms)
+2. Process request and generate response
+3. Send response to client (~1 second total)
+4. Settle payment on blockchain in background (async)
+
+**Characteristics:**
+- ⚡ **Fast**: ~1 second response time
+- 🎯 **Better UX**: Users get instant responses
+- 💰 **Risk**: Small window where payment might fail to settle
+- ✅ **Best for**: Most applications, especially user-facing APIs
+
+**When to use:**
+- User-facing APIs where speed matters
+- Low-value transactions
+- High-volume endpoints
+- When you can handle occasional settlement failures gracefully
+
+```ruby
+X402.configure do |config|
+  config.optimistic = true  # Default
+end
+```
+
+#### Non-Optimistic Mode (`false`)
+
+**Flow:**
+1. Verify payment signature (off-chain, ~100ms)
+2. Settle payment on blockchain (wait for transaction, ~1 second)
+3. Process request and generate response
+4. Send response to client (~2 seconds total)
+
+**Characteristics:**
+- 🛡️ **Secure**: Payment guaranteed before response
+- 🐢 **Slower**: ~2 second response time
+- 💎 **Zero risk**: No chance of unpaid responses
+- ✅ **Best for**: High-value transactions, critical data
+
+**When to use:**
+- High-value content or services
+- Critical or sensitive data
+- When payment certainty is more important than speed
+- Compliance or auditing requirements
+
+```ruby
+X402.configure do |config|
+  config.optimistic = false
+end
+```
+
+#### Mode Comparison
+
+| Feature | Optimistic | Non-Optimistic |
+|---------|-----------|----------------|
+| Response Time | ~1 second | ~2 seconds |
+| User Experience | Excellent | Good |
+| Payment Certainty | High (async) | Guaranteed |
+| Risk of Unpaid Response | Very low | Zero |
+| Recommended For | General use | High-value content |
+
+#### Handling Settlement Failures (Optimistic Mode)
+
+In optimistic mode, settlement happens after the response is sent. If settlement fails:
+
+1. **Logged automatically**: Check Rails logs for settlement errors
+2. **User still got service**: Cannot be revoked
+3. **Monitoring recommended**: Track failure rates
+4. **Rare in practice**: Most failures are caught during verification
+
+```ruby
+# Add monitoring for settlement failures
+class ApplicationController < ActionController::API
+  after_action :log_settlement_status, if: -> { request.env['x402.payment'] }
+
+  private
+
+  def log_settlement_status
+    settlement = request.env['x402.settlement_result']
+    unless settlement&.success?
+      # Alert your monitoring service
+      Rails.logger.error("Settlement failed for #{request.env['x402.payment'][:payer]}")
+    end
+  end
+end
 ```
 
 ## Payment Flow
 
-The gem follows a secure payment flow:
+The gem follows a secure payment flow that varies by mode:
 
-1. **Verify**: Payment signature is validated (no blockchain transaction yet)
-2. **Process**: Your controller action executes and renders the response
-3. **Settle**: If response is successful (2xx status), payment is settled on-chain
-4. **Response**: Client receives response with settlement confirmation header
+### Optimistic Mode (Default)
 
-This ensures users only pay for successful requests.
+1. **Verify**: Payment signature validated off-chain (~100ms)
+2. **Process**: Controller action executes
+3. **Respond**: Client receives response (~1s total)
+4. **Settle**: Payment settled on blockchain asynchronously
+
+### Non-Optimistic Mode
+
+1. **Verify**: Payment signature validated off-chain (~100ms)
+2. **Settle**: Payment settled on blockchain (~1s)
+3. **Process**: Controller action executes
+4. **Respond**: Client receives response (~2s total)
+
+**Both modes ensure:**
+- Users only pay for successful (2xx) responses
+- Invalid payments are rejected before processing
+- Settlement failures are logged and monitored
 
 ## Accessing Payment Info
 
@@ -216,10 +346,26 @@ API clients receive JSON:
 Configure via environment variables:
 
 ```bash
+# Required
 X402_WALLET_ADDRESS=0xYourAddress
+
+# Optional (with defaults)
 X402_FACILITATOR_URL=https://x402.org/facilitator
 X402_CHAIN=base-sepolia
 X402_CURRENCY=USDC
+X402_OPTIMISTIC=true  # "true" or "false"
+```
+
+All environment variables can be used in your initializer:
+
+```ruby
+X402.configure do |config|
+  config.wallet_address = ENV.fetch('X402_WALLET_ADDRESS')
+  config.facilitator = ENV.fetch('X402_FACILITATOR_URL', 'https://x402.org/facilitator')
+  config.chain = ENV.fetch('X402_CHAIN', 'base-sepolia')
+  config.currency = ENV.fetch('X402_CURRENCY', 'USDC')
+  config.optimistic = ENV.fetch('X402_OPTIMISTIC', 'true') == 'true'
+end
 ```
 
 ## Examples
@@ -271,6 +417,59 @@ class AiController < ApplicationController
     result = generate_ai_response(params[:prompt], tokens)
     render json: { result: result }
   end
+end
+```
+
+### High-Value Content (Non-Optimistic Mode)
+
+For premium content where payment certainty is critical:
+
+```ruby
+class PremiumReportsController < ApplicationController
+  # Use non-optimistic mode for high-value content
+  def initialize
+    @original_optimistic = X402.configuration.optimistic
+    super
+  end
+
+  before_action :use_non_optimistic_mode
+
+  def download
+    # $50 premium report - wait for settlement
+    x402_paywall(amount: 50.00, chain: "base")  # Use mainnet for production
+
+    report = generate_premium_report(params[:id])
+
+    send_data report.to_pdf,
+      filename: "premium_report_#{params[:id]}.pdf",
+      type: 'application/pdf'
+  end
+
+  private
+
+  def use_non_optimistic_mode
+    # Temporarily disable optimistic mode for this controller
+    X402.configuration.optimistic = false
+  end
+
+  after_action :restore_optimistic_mode
+
+  def restore_optimistic_mode
+    X402.configuration.optimistic = @original_optimistic
+  end
+end
+```
+
+Or use environment-based configuration:
+
+```ruby
+# config/initializers/x402.rb
+X402.configure do |config|
+  config.wallet_address = ENV['X402_WALLET_ADDRESS']
+  config.chain = "base"  # Mainnet for production
+
+  # Use non-optimistic mode for production high-value transactions
+  config.optimistic = Rails.env.production? ? false : true
 end
 ```
 
@@ -434,11 +633,24 @@ After successful payment, view the transaction:
 
 ## How It Works
 
-1. **No payment**: Returns HTTP 402 with payment requirements
-2. **Payment received**: Verifies signature via facilitator (no blockchain transaction yet)
-3. **Valid payment**: Processes request and renders response
-4. **Settlement**: If response is 2xx, settles payment on blockchain
-5. **Invalid payment**: Returns 402 with error details
+### Request Flow
+
+1. **No payment header**: Returns HTTP 402 with payment requirements
+2. **Payment header present**: Verifies EIP-712 signature via facilitator (off-chain, no gas)
+3. **Invalid signature**: Returns 402 with error details
+4. **Valid signature**:
+   - **Optimistic mode**: Process → Respond → Settle (async)
+   - **Non-optimistic mode**: Settle → Process → Respond (sync)
+5. **Settlement**: Transaction submitted to blockchain (only for 2xx responses)
+6. **Response**: Includes `X-PAYMENT-RESPONSE` header with transaction hash
+
+### Under the Hood
+
+- **EIP-712 signatures**: Cryptographically verify payment authorization
+- **EIP-3009**: TransferWithAuthorization - no token approvals needed
+- **Facilitator**: Verifies signatures and submits blockchain transactions
+- **After-action callback**: Handles async settlement in optimistic mode
+- **Atomic units**: All amounts in USDC's smallest unit (1 USDC = 1,000,000 atomic units)
 
 ## Architecture
 
