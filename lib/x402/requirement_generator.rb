@@ -25,7 +25,7 @@ module X402
       }
 
       # Create payment requirement
-      requirement = Models::PaymentRequirement.new(
+      requirement = PaymentRequirement.new(
         scheme: "exact",
         network: chain_name,
         max_amount_required: atomic_amount,
