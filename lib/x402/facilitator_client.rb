@@ -55,7 +55,7 @@ module X402
       ::Rails.logger.info("Response body: #{response.body}")
 
       settlement_data = handle_response(response, "settle")
-      Models::SettlementResponse.new(settlement_data)
+      SettlementResponse.new(settlement_data)
     rescue Faraday::Error => e
       raise FacilitatorError, "Failed to settle payment: #{e.message}"
     end
