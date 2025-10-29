@@ -31,8 +31,6 @@ bundle install
 
 ## Quick Start
 
-### Add how to run spe
-
 ### 1. Configure the gem
 
 Create `config/initializers/x402.rb`:
