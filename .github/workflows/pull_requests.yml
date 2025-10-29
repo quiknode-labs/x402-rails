@@ -24,6 +24,8 @@ jobs:
         with:
           ruby-version: '3.3'
           bundler-cache: true
+        env:
+          BUNDLE_WITH: 'development:test'
 
       - name: Run tests
         run: rake
