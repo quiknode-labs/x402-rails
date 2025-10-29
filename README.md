@@ -1,6 +1,8 @@
 # x402-rails
 
-Accept instant blockchain micropayments in Rails applications using the [x402 payment protocol](https://docs.cdp.coinbase.com/x402). Enable HTTP 402 Payment Required with USDC payments on Base and other networks.
+Accept instant blockchain micropayments in your Rails applications using the [x402 payment protocol](https://www.x402.org/).
+
+Supports Base, avalanche, and other blockchain networks.
 
 ## Features
 
@@ -37,7 +39,7 @@ Create `config/initializers/x402.rb`:
 X402.configure do |config|
   config.wallet_address = ENV['X402_WALLET_ADDRESS']  # Your recipient wallet
   config.facilitator = "https://x402.org/facilitator"
-  config.chain = "base-sepolia"  # or "base" for mainnet
+  config.chain = "base-sepolia"  # or "base" for base mainnet
   config.currency = "USDC"
   config.optimistic = true  # Fast responses (default), false for guaranteed settlement
 end
@@ -84,13 +86,15 @@ Protect multiple actions:
 class PremiumController < ApplicationController
   before_action :require_payment, only: [:show, :index]
 
-  def require_payment
-    x402_paywall(amount: 0.001, chain: "base")
-  end
-
   def show
     # Payment already verified
     render json: @premium_content
+  end
+
+  private
+
+  def require_payment
+    x402_paywall(amount: 0.001, chain: "base")
   end
 end
 ```
@@ -123,20 +127,20 @@ X402.configure do |config|
   config.wallet_address = ENV['X402_WALLET_ADDRESS']
 
   # Facilitator service URL (default: "https://x402.org/facilitator")
-  config.facilitator = "https://x402.org/facilitator"
+  config.facilitator = ENV.fetch("X402_FACILITATOR_URL", "https://x402.org/facilitator")
 
   # Blockchain network (default: "base-sepolia")
   # Options: "base-sepolia", "base", "avalanche-fuji", "avalanche"
-  config.chain = "base-sepolia"
+  config.chain = ENV.fetch("X402_CHAIN", "base-sepolia")
 
   # Payment token (default: "USDC")
   # Currently only USDC is supported
-  config.currency = "USDC"
+  config.currency = ENV.fetch("X402_CURRENCY","USDC"
 
   # Optimistic mode (default: true)
   # true: Fast response, settle payment after response is sent
   # false: Wait for blockchain settlement before sending response
-  config.optimistic = true
+  config.optimistic = ENV.fetch("X402_OPTIMISTIC",true
 end
 ```
 
@@ -167,7 +171,7 @@ X402_OPTIMISTIC=true  # "true" or "false"
 
 ## Examples
 
-### Premium API
+### Weather API
 
 ```ruby
 class WeatherController < ApplicationController
@@ -227,4 +231,4 @@ The gem raises these errors:
 
 ## License
 
-MIT License. See LICENSE.txt for details.
+MIT License. See [LICENSE.txt](LICENSE.txt).
