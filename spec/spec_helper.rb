@@ -1,6 +1,16 @@
 # frozen_string_literal: true
 
 require "x402/rails"
+require 'simplecov'
+require 'simplecov-formatter-badge'
+
+
+SimpleCov.start do
+  SimpleCov.formatters = SimpleCov::Formatter::MultiFormatter.new([
+    SimpleCov::Formatter::HTMLFormatter,
+    SimpleCov::Formatter::BadgeFormatter
+  ])
+end
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

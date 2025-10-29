@@ -11,7 +11,7 @@ RSpec.describe X402::Configuration do
       expect(config.facilitator).to eq("https://x402.org/facilitator")
       expect(config.chain).to eq("base-sepolia")
       expect(config.currency).to eq("USDC")
-      expect(config.optimistic).to be true
+      expect(config.optimistic).to be false
     end
 
     it "reads wallet_address from environment" do

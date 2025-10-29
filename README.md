@@ -1,5 +1,7 @@
 # x402-rails
 
+![Coverage](./coverage/coverage.svg)
+
 Accept instant blockchain micropayments in your Rails applications using the [x402 payment protocol](https://www.x402.org/).
 
 Supports Base, avalanche, and other blockchain networks.
