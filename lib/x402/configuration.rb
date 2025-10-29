@@ -9,7 +9,7 @@ module X402
       @facilitator = ENV.fetch("X402_FACILITATOR_URL", "https://x402.org/facilitator")
       @chain = ENV.fetch("X402_CHAIN", "base-sepolia")
       @currency = ENV.fetch("X402_CURRENCY", "USDC")
-      @optimistic = ENV.fetch("X402_OPTIMISTIC", "true") == "true"  # Default to optimistic mode (fast response, settle after)
+      @optimistic = ENV.fetch("X402_OPTIMISTIC", "false") == "true"  # Default to optimistic mode (fast response, settle after)
     end
 
     def validate!
