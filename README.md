@@ -41,7 +41,7 @@ X402.configure do |config|
   config.facilitator = "https://x402.org/facilitator"
   config.chain = "base-sepolia"  # or "base" for base mainnet
   config.currency = "USDC"
-  config.optimistic = true  # Fast responses (default), false for guaranteed settlement
+  config.optimistic = false  # Forces to check for settlement before giving response.
 end
 ```
 
@@ -135,12 +135,12 @@ X402.configure do |config|
 
   # Payment token (default: "USDC")
   # Currently only USDC is supported
-  config.currency = ENV.fetch("X402_CURRENCY","USDC"
+  config.currency = ENV.fetch("X402_CURRENCY","USDC")
 
   # Optimistic mode (default: true)
   # true: Fast response, settle payment after response is sent
   # false: Wait for blockchain settlement before sending response
-  config.optimistic = ENV.fetch("X402_OPTIMISTIC",true
+  config.optimistic = ENV.fetch("X402_OPTIMISTIC",false)
 end
 ```
 
