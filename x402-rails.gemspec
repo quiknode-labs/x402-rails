@@ -5,17 +5,17 @@ require_relative "lib/x402/rails/version"
 Gem::Specification.new do |spec|
   spec.name = "x402-rails"
   spec.version = X402::Rails::VERSION
-  spec.authors = ["Zach Perlman"]
-  spec.email = ["z.h.perlman@gmail.com"]
+  spec.authors = ["QuickNode"]
+  spec.email = ["zach@quiknode.io"]
 
   spec.summary = "Rails integration for x402 payment protocol"
   spec.description = "Accept instant blockchain micropayments in Rails applications using the x402 protocol. Enable HTTP 402 Payment Required with USDC payments on Base and other networks."
-  spec.homepage = "https://github.com/yourusername/x402-rails"
+  spec.homepage = "https://github.com/quiknode-labs/x402-rails"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.0.0"
 
   spec.metadata["homepage_uri"] = spec.homepage
-  spec.metadata["source_code_uri"] = "https://github.com/yourusername/x402-rails"
+  spec.metadata["source_code_uri"] = "https://github.com/quiknode-labs/x402-rails"
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
