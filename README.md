@@ -17,6 +17,11 @@ Supports Base, avalanche, and other blockchain networks.
 - **Browser paywall** and API support
 - **Rails 7.0+** compatible
 
+## Example Video
+https://github.com/user-attachments/assets/05983bb3-7422-4c06-97ab-2fb53d6428cc
+
+
+
 ## Installation
 
 Add to your Gemfile:
