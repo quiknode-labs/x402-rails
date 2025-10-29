@@ -53,7 +53,7 @@ module X402
 
       def process_payment(payment_header, amount, chain, currency)
         # Parse payment payload
-        payment_payload = X402::Models::PaymentPayload.from_header(payment_header)
+        payment_payload = X402::PaymentPayload.from_header(payment_header)
 
         # Generate requirement for validation (must match the 402 response exactly!)
         requirement_data = X402::RequirementGenerator.generate(
@@ -64,7 +64,7 @@ module X402
           currency: currency
         )
 
-        requirement = X402::Models::PaymentRequirement.new(requirement_data[:accepts].first)
+        requirement = X402::PaymentRequirement.new(requirement_data[:accepts].first)
 
         # Validate payment (verify signature, but don't settle on blockchain yet)
         validator = X402::PaymentValidator.new
