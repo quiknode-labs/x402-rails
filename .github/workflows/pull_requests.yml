@@ -23,12 +23,12 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
-          bundler-cache: true
-        env:
-          BUNDLE_WITH: 'development:test'
+
+      - name: Install dependencies
+        run: bundle install --jobs 4 --retry 3
 
       - name: Run tests
-        run: rake
+        run: bundle exec rake
 
       - name: Commit coverage badge
         if: github.ref == 'refs/heads/main'
