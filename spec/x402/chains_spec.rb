@@ -9,7 +9,7 @@ RSpec.describe X402, "chains" do
     it "includes base-sepolia configuration" do
       expect(X402::CHAINS["base-sepolia"]).to include(
         chain_id: 84532,
-        rpc_url: "https://sepolia.base.org",
+        rpc_url: "https://clean-snowy-hexagon.base-sepolia.quiknode.pro",
         usdc_address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
         explorer_url: "https://sepolia.basescan.org"
       )
@@ -18,7 +18,7 @@ RSpec.describe X402, "chains" do
     it "includes base mainnet configuration" do
       expect(X402::CHAINS["base"]).to include(
         chain_id: 8453,
-        rpc_url: "https://mainnet.base.org",
+        rpc_url: "https://snowy-compatible-ensemble.base-mainnet.quiknode.pro",
         usdc_address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
         explorer_url: "https://basescan.org"
       )
@@ -141,14 +141,14 @@ RSpec.describe X402, "chains" do
 
     it "returns default RPC URL when no override is set" do
       rpc_url = X402.rpc_url_for("base-sepolia")
-      expect(rpc_url).to eq("https://sepolia.base.org")
+      expect(rpc_url).to eq("https://clean-snowy-hexagon.base-sepolia.quiknode.pro")
     end
 
     it "returns different URLs for different chains" do
       base_url = X402.rpc_url_for("base")
       avalanche_url = X402.rpc_url_for("avalanche")
-      expect(base_url).to eq("https://mainnet.base.org")
-      expect(avalanche_url).to eq("https://api.avax.network/ext/bc/C/rpc")
+      expect(base_url).to eq("https://snowy-compatible-ensemble.base-mainnet.quiknode.pro")
+      expect(avalanche_url).to eq("https://floral-patient-panorama.avalanche-mainnet.quiknode.pro/ext/bc/C/rpc")
     end
 
     it "prefers environment variable over default" do
