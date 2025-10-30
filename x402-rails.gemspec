@@ -6,10 +6,10 @@ Gem::Specification.new do |spec|
   spec.name = "x402-rails"
   spec.version = X402::Rails::VERSION
   spec.authors = ["QuickNode"]
-  spec.email = ["zach@quiknode.io"]
+  spec.email = ["zach+x402@quiknode.io"]
 
   spec.summary = "Rails integration for x402 payment protocol"
-  spec.description = "Accept instant blockchain micropayments in Rails applications using the x402 protocol. Enable HTTP 402 Payment Required with USDC payments on Base and other networks."
+  spec.description = "Accept instant blockchain micropayments in Rails applications using the x402 protocol."
   spec.homepage = "https://github.com/quiknode-labs/x402-rails"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.0.0"
