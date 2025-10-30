@@ -18,9 +18,8 @@ Supports Base, avalanche, and other blockchain networks.
 - **Rails 7.0+** compatible
 
 ## Example Video
+
 https://github.com/user-attachments/assets/05983bb3-7422-4c06-97ab-2fb53d6428cc
-
-
 
 ## Installation
 
@@ -160,6 +159,48 @@ end
 | `chain`          | No       | `"base-sepolia"`                 | Blockchain network to use (`base-sepolia`, `base`, `avalanche-fuji`, `avalanche`) |
 | `currency`       | No       | `"USDC"`                         | Payment token symbol (currently only USDC supported)                              |
 | `optimistic`     | No       | `true`                           | Settlement mode (see Optimistic vs Non-Optimistic Mode below)                     |
+| `rpc_urls`       | No       | `{}`                             | Custom RPC endpoint URLs per chain (see Custom RPC URLs below)                    |
+
+### Custom RPC URLs
+
+By default, x402-rails uses public QuickNode RPC endpoints for each supported chain. For production use or higher reliability, you can configure custom RPC URLs from providers like [QuickNode](https://www.quicknode.com/).
+
+**Configuration Priority** (highest to lowest):
+
+1. Programmatic configuration via `config.rpc_urls`
+2. Per-chain environment variables
+3. Built-in default RPC URLs
+
+#### Method 1: Programmatic Configuration
+
+Configure RPC URLs in your initializer:
+
+```ruby
+X402.configure do |config|
+  config.wallet_address = ENV['X402_WALLET_ADDRESS']
+
+  # Custom RPC URLs per chain
+  config.rpc_urls["base"] = "https://your-base-rpc.quiknode.pro/your-key"
+  config.rpc_urls["base-sepolia"] = "https://your-sepolia-rpc.quiknode.pro/your-key"
+  config.rpc_urls["avalanche"] = "https://your-avalanche-rpc.quiknode.pro/your-key"
+end
+```
+
+#### Method 2: Environment Variables
+
+Set per-chain environment variables:
+
+```bash
+# Per-chain RPC URL overrides
+X402_BASE_RPC_URL=https://your-base-rpc.quiknode.pro/your-key
+X402_BASE_SEPOLIA_RPC_URL=https://your-sepolia-rpc.quiknode.pro/your-key
+X402_AVALANCHE_RPC_URL=https://your-avalanche-rpc.quiknode.pro/your-key
+X402_AVALANCHE_FUJI_RPC_URL=https://your-fuji-rpc.quiknode.pro/your-key
+```
+
+#### Method 3: Default RPC URLs
+
+If no custom RPC URL is configured, it will default to the public QuickNode RPC urls.
 
 ## Environment Variables
 
@@ -174,6 +215,12 @@ X402_FACILITATOR_URL=https://x402.org/facilitator
 X402_CHAIN=base-sepolia
 X402_CURRENCY=USDC
 X402_OPTIMISTIC=true  # "true" or "false"
+
+# Custom RPC URLs (optional, per-chain overrides)
+X402_BASE_RPC_URL=https://your-base-rpc.quiknode.pro/your-key
+X402_BASE_SEPOLIA_RPC_URL=https://your-base-speoliarpc.quiknode.pro/your-key
+X402_AVALANCHE_RPC_URL=https://your-avalanche.quiknode.pro/your-key
+X402_AVALANCHE_FUJI_RPC_URL=https://your-fuji-rpc.quiknode.pro/your-key
 ```
 
 ## Examples

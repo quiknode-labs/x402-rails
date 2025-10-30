@@ -133,4 +133,54 @@ RSpec.describe X402, "chains" do
       expect { X402.currency_decimals_for_chain("unknown") }.to raise_error(X402::ConfigurationError)
     end
   end
+
+  describe ".rpc_url_for" do
+    before do
+      X402.reset_configuration!
+    end
+
+    it "returns default RPC URL when no override is set" do
+      rpc_url = X402.rpc_url_for("base-sepolia")
+      expect(rpc_url).to eq("https://sepolia.base.org")
+    end
+
+    it "returns different URLs for different chains" do
+      base_url = X402.rpc_url_for("base")
+      avalanche_url = X402.rpc_url_for("avalanche")
+      expect(base_url).to eq("https://mainnet.base.org")
+      expect(avalanche_url).to eq("https://api.avax.network/ext/bc/C/rpc")
+    end
+
+    it "prefers environment variable over default" do
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("X402_BASE_SEPOLIA_RPC_URL").and_return("https://custom-env-rpc.com")
+
+      rpc_url = X402.rpc_url_for("base-sepolia")
+      expect(rpc_url).to eq("https://custom-env-rpc.com")
+    end
+
+    it "prefers programmatic config over environment variable" do
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("X402_BASE_SEPOLIA_RPC_URL").and_return("https://custom-env-rpc.com")
+
+      X402.configure do |config|
+        config.rpc_urls["base-sepolia"] = "https://custom-config-rpc.com"
+      end
+
+      rpc_url = X402.rpc_url_for("base-sepolia")
+      expect(rpc_url).to eq("https://custom-config-rpc.com")
+    end
+
+    it "handles chain names with hyphens in environment variable names" do
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("X402_AVALANCHE_FUJI_RPC_URL").and_return("https://custom-fuji-rpc.com")
+
+      rpc_url = X402.rpc_url_for("avalanche-fuji")
+      expect(rpc_url).to eq("https://custom-fuji-rpc.com")
+    end
+
+    it "raises error for unsupported chain" do
+      expect { X402.rpc_url_for("ethereum") }.to raise_error(X402::ConfigurationError)
+    end
+  end
 end
