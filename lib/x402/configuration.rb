@@ -2,7 +2,7 @@
 
 module X402
   class Configuration
-    attr_accessor :wallet_address, :facilitator, :chain, :currency, :optimistic, :rpc_urls
+    attr_accessor :wallet_address, :facilitator, :chain, :currency, :optimistic, :rpc_urls, :solana_fee_payer
 
     def initialize
       @wallet_address = ENV.fetch("X402_WALLET_ADDRESS", nil)
@@ -11,6 +11,7 @@ module X402
       @currency = ENV.fetch("X402_CURRENCY", "USDC")
       @optimistic = ENV.fetch("X402_OPTIMISTIC", "false") == "true"  # Default to optimistic mode (fast response, settle after)
       @rpc_urls = {}
+      @solana_fee_payer = ENV.fetch("X402_SOLANA_FEE_PAYER", nil)
     end
 
     def validate!

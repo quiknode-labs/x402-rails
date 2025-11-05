@@ -33,27 +33,40 @@ module X402
       payload&.with_indifferent_access&.[](:signature)
     end
 
+    def solana_transaction?
+      payload&.with_indifferent_access&.key?(:transaction)
+    end
+
     def from_address
       authorization&.with_indifferent_access&.[](:from)
     end
 
     def to_address
+      # For Solana transactions, we cannot easily extract the recipient
+      # without fully parsing the transaction. The facilitator will validate this.
+      return nil if solana_transaction?
       authorization&.with_indifferent_access&.[](:to)
     end
 
     def value
+      # For Solana transactions, we cannot easily extract the amount
+      # without fully parsing the transaction. The facilitator will validate this.
+      return nil if solana_transaction?
       authorization&.with_indifferent_access&.[](:value)
     end
 
     def valid_after
+      return nil if solana_transaction?
       authorization&.with_indifferent_access&.[](:validAfter) || authorization&.with_indifferent_access&.[](:valid_after)
     end
 
     def valid_before
+      return nil if solana_transaction?
       authorization&.with_indifferent_access&.[](:validBefore) || authorization&.with_indifferent_access&.[](:valid_before)
     end
 
     def nonce
+      return nil if solana_transaction?
       authorization&.with_indifferent_access&.[](:nonce)
     end
 

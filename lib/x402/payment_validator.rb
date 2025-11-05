@@ -19,17 +19,21 @@ module X402
         return validation_error("Network mismatch: expected #{requirement.network}, got #{payment_payload.network}")
       end
 
-      # Validate recipient address
-      unless payment_payload.to_address&.downcase == requirement.pay_to&.downcase
-        return validation_error("Recipient mismatch: expected #{requirement.pay_to}, got #{payment_payload.to_address}")
-      end
+      # For Solana transactions, skip client-side validation of recipient and amount
+      # The facilitator will parse the transaction and validate these fields
+      unless payment_payload.solana_transaction?
+        # Validate recipient address (EVM only)
+        unless payment_payload.to_address&.downcase == requirement.pay_to&.downcase
+          return validation_error("Recipient mismatch: expected #{requirement.pay_to}, got #{payment_payload.to_address}")
+        end
 
-      # Validate amount
-      payment_value = payment_payload.value.to_i
-      required_value = requirement.max_amount_required.to_i
+        # Validate amount (EVM only)
+        payment_value = payment_payload.value.to_i
+        required_value = requirement.max_amount_required.to_i
 
-      if payment_value < required_value
-        return validation_error("Insufficient amount: expected at least #{required_value}, got #{payment_value}")
+        if payment_value < required_value
+          return validation_error("Insufficient amount: expected at least #{required_value}, got #{payment_value}")
+        end
       end
 
       # Call facilitator to verify payment (does NOT settle on blockchain yet)

@@ -26,6 +26,20 @@ module X402
       rpc_url: "https://floral-patient-panorama.avalanche-mainnet.quiknode.pro/ext/bc/C/rpc",
       usdc_address: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
       explorer_url: "https://snowtrace.io"
+    },
+    "solana-devnet" => {
+      chain_id: 103,
+      rpc_url: "https://bitter-twilight-vineyard.solana-devnet.quiknode.pro/",
+      usdc_address: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+      explorer_url: "https://explorer.solana.com/?cluster=devnet",
+      fee_payer: "CKPKJWNdJEqa81x7CkZ14BVPiY6y16Sxs7owznqtWYp5"
+    },
+    "solana" => {
+      chain_id: 101,
+      rpc_url: "https://alien-burned-energy.solana-mainnet.quiknode.pro/",
+      usdc_address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      explorer_url: "https://explorer.solana.com",
+      fee_payer: "CKPKJWNdJEqa81x7CkZ14BVPiY6y16Sxs7owznqtWYp5"
     }
   }.freeze
 
@@ -53,6 +67,18 @@ module X402
       symbol: "USDC",
       decimals: 6,
       name: "USDC",  # Mainnet uses "USDC"
+      version: "2"
+    },
+    "solana-devnet" => {
+      symbol: "USDC",
+      decimals: 6,
+      name: "USDC",
+      version: "2"
+    },
+    "solana" => {
+      symbol: "USDC",
+      decimals: 6,
+      name: "USD Coin",
       version: "2"
     }
   }.freeze
@@ -86,12 +112,33 @@ module X402
       return config.rpc_urls[chain_name] if config.rpc_urls[chain_name]
 
       # Check environment variable
-      env_var_name = "X402_#{chain_name.upcase.gsub('-', '_')}_RPC_URL"
-      env_rpc = ENV[env_var_name]
-      return env_rpc if env_rpc && !env_rpc.empty?
+      # For Solana chains, use a single X402_SOLANA_RPC_URL env var
+      if chain_name.start_with?("solana")
+        env_rpc = ENV["X402_SOLANA_RPC_URL"]
+        return env_rpc if env_rpc && !env_rpc.empty?
+      else
+        env_var_name = "X402_#{chain_name.upcase.gsub('-', '_')}_RPC_URL"
+        env_rpc = ENV[env_var_name]
+        return env_rpc if env_rpc && !env_rpc.empty?
+      end
 
       # Fall back to default
       chain_config(chain_name)[:rpc_url]
+    end
+
+    def fee_payer_for(chain_name)
+      # Priority: 1) Programmatic config, 2) ENV variable, 3) Default from CHAINS
+      config = X402.configuration
+
+      # Check programmatic configuration
+      return config.solana_fee_payer if config.solana_fee_payer && !config.solana_fee_payer.empty?
+
+      # Check environment variable
+      env_fee_payer = ENV["X402_SOLANA_FEE_PAYER"]
+      return env_fee_payer if env_fee_payer && !env_fee_payer.empty?
+
+      # Fall back to default
+      chain_config(chain_name)[:fee_payer]
     end
   end
 end

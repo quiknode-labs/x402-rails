@@ -16,13 +16,21 @@ module X402
       # Get asset address (USDC contract address for the chain)
       asset_address = X402.usdc_address_for(chain_name)
 
-      # Build EIP-712 domain info (required for signature verification)
-      # IMPORTANT: The name must match what the USDC contract returns for name()
-      # Testnets use "USDC", mainnets use "USD Coin" or "USDC" depending on chain
-      eip712_domain = {
-        name: currency_config[:name],
-        version: currency_config[:version]
-      }
+      # Build extra data based on chain type
+      extra_data = if chain_name.start_with?("solana")
+        # Solana chains require feePayer in extra
+        {
+          feePayer: X402.fee_payer_for(chain_name)
+        }
+      else
+        # EVM chains require EIP-712 domain info for signature verification
+        # IMPORTANT: The name must match what the USDC contract returns for name()
+        # Testnets use "USDC", mainnets use "USD Coin" or "USDC" depending on chain
+        {
+          name: currency_config[:name],
+          version: currency_config[:version]
+        }
+      end
 
       # Create payment requirement
       requirement = PaymentRequirement.new(
@@ -35,7 +43,7 @@ module X402
         description: description || "Payment required for #{resource}",
         max_timeout_seconds: 600,
         mime_type: "application/json",
-        extra: eip712_domain
+        extra: extra_data
       )
 
       # Build full response
