@@ -59,6 +59,7 @@ Use `x402_paywall` in any controller action:
 class ApiController < ApplicationController
   def weather
     x402_paywall(amount: 0.001)  # $0.001 in USD
+    return if performed?
 
     render json: {
       temperature: 72,
@@ -79,6 +80,7 @@ Call `x402_paywall` in any action:
 ```ruby
 def show
   x402_paywall(amount: 0.01)
+  return if performed?
   # Action continues after payment verified
   render json: @data
 end
@@ -101,6 +103,7 @@ class PremiumController < ApplicationController
 
   def require_payment
     x402_paywall(amount: 0.001, chain: "base")
+    return if performed?
   end
 end
 ```
@@ -112,11 +115,13 @@ Different prices for different actions:
 ```ruby
 def basic_data
   x402_paywall(amount: 0.001)
+  return if performed?
   render json: basic_info
 end
 
 def premium_data
   x402_paywall(amount: 0.01)
+  return if performed?
   render json: premium_info
 end
 ```
@@ -231,11 +236,13 @@ X402_AVALANCHE_FUJI_RPC_URL=https://your-fuji-rpc.quiknode.pro/your-key
 class WeatherController < ApplicationController
   def current
     x402_paywall(amount: 0.001)
+    return if performed?
     render json: { temp: 72, condition: "sunny" }
   end
 
   def forecast
     x402_paywall(amount: 0.01)
+    return if performed?
     render json: { forecast: [...] }
   end
 end
