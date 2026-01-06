@@ -114,10 +114,12 @@ module X402
 
         resource_info = requirement_data[:resource] || {}
         requirement_attrs = matching_accept.merge(
-          version: protocol_version,
-          resource: resource_info[:url],
-          description: resource_info[:description],
-          mime_type: resource_info[:mimeType]
+          {
+            version: protocol_version,
+            resource: resource_info[:url],
+            description: resource_info[:description],
+            mime_type: resource_info[:mimeType]
+          }.compact
         )
         requirement = X402::PaymentRequirement.new(requirement_attrs)
 

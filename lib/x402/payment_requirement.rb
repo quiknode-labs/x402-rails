@@ -60,7 +60,7 @@ module X402
     def normalize_network(network_value)
       return network_value unless network_value
 
-      if network_value.include?(":")
+      if network_value.to_s.include?(":")
         X402.from_caip2(network_value)
       else
         network_value

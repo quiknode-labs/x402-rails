@@ -7,7 +7,7 @@ module X402
     def initialize(attributes = {})
       attrs = attributes.with_indifferent_access
 
-      @x402_version = attrs[:x402Version] || attrs[:x402_version] || 1
+      @x402_version = (attrs[:x402Version] || attrs[:x402_version] || 1).to_i
       @accepted = attrs[:accepted]
       @resource_info = attrs[:resource]
 
