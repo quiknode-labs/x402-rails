@@ -1,5 +1,7 @@
 # x402-rails
 
+## Now supporting x402 v2!
+
 ![Coverage](./coverage/coverage.svg)
 
 Accept instant blockchain micropayments in your Rails applications using the [x402 payment protocol](https://www.x402.org/).
@@ -164,6 +166,7 @@ end
 | `chain`          | No       | `"base-sepolia"`                 | Blockchain network to use (`base-sepolia`, `base`, `avalanche-fuji`, `avalanche`) |
 | `currency`       | No       | `"USDC"`                         | Payment token symbol (currently only USDC supported)                              |
 | `optimistic`     | No       | `true`                           | Settlement mode (see Optimistic vs Non-Optimistic Mode below)                     |
+| `version`        | No       | `2`                              | Protocol version (1 or 2). See Protocol Versions section                          |
 | `rpc_urls`       | No       | `{}`                             | Custom RPC endpoint URLs per chain (see Custom RPC URLs below)                    |
 
 ### Custom RPC URLs
@@ -323,6 +326,50 @@ config.accept(chain: "polygon-amoy", currency: "USDC", wallet_address: "0xWallet
 ```
 
 **Fallback behavior:** If no `config.accept()` calls are made, the default `config.chain` and `config.currency` are used.
+
+## Protocol Versions
+
+x402-rails supports both v1 and v2 of the x402 protocol. **v2 is the default**.
+
+### v2 (Default)
+
+```ruby
+X402.configure do |config|
+  config.wallet_address = ENV['X402_WALLET_ADDRESS']
+  config.version = 2  # Default, can be omitted
+end
+```
+
+v2 uses CAIP-2 network identifiers (`eip155:84532`) and the `PAYMENT-SIGNATURE` header.
+
+### v1 (Legacy)
+
+```ruby
+X402.configure do |config|
+  config.wallet_address = ENV['X402_WALLET_ADDRESS']
+  config.version = 1
+end
+```
+
+v1 uses simple network names (`base-sepolia`) and the `X-PAYMENT` header.
+
+### Per-Endpoint Version
+
+Override the version for specific endpoints:
+
+```ruby
+def premium_v2
+  x402_paywall(amount: 0.001, version: 2)
+  return if performed?
+  render json: { data: "v2 endpoint" }
+end
+
+def legacy_v1
+  x402_paywall(amount: 0.001, version: 1)
+  return if performed?
+  render json: { data: "v1 endpoint" }
+end
+```
 
 ## Environment Variables
 
