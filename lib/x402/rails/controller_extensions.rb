@@ -179,8 +179,9 @@ module X402
 
         accepts.find do |accept|
           accept_network = accept[:network]
-
-          if accept_network.include?(":")
+          next false unless accept_network.present?
+          
+          if accept_network.to_s.include?(":")
             accept_network == payment_network ||
               version_strategy.parse_network(accept_network) == payment_network
           else
