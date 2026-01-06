@@ -207,6 +207,123 @@ X402_AVALANCHE_FUJI_RPC_URL=https://your-fuji-rpc.quiknode.pro/your-key
 
 If no custom RPC URL is configured, it will default to the public QuickNode RPC urls.
 
+### Custom Chains and Tokens
+
+You can register custom EVM chains and tokens beyond the built-in options.
+
+#### Register a Custom Chain
+
+Add support for any EVM-compatible chain:
+
+```ruby
+X402.configure do |config|
+  config.wallet_address = ENV['X402_WALLET_ADDRESS']
+
+  # Register Polygon mainnet
+  config.register_chain(
+    name: "polygon",
+    chain_id: 137,
+    standard: "eip155"
+  )
+
+  # Register the token for that chain
+  config.register_token(
+    chain: "polygon",
+    symbol: "USDC",
+    address: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+    decimals: 6,
+    name: "USD Coin",
+    version: "2"
+  )
+
+  config.chain = "polygon"
+  config.currency = "USDC"
+end
+```
+
+#### Register a Custom Token on a Built-in Chain
+
+Accept different tokens on existing chains:
+
+```ruby
+X402.configure do |config|
+  config.wallet_address = ENV['X402_WALLET_ADDRESS']
+
+  # Accept WETH on Base instead of USDC
+  config.register_token(
+    chain: "base",
+    symbol: "WETH",
+    address: "0x4200000000000000000000000000000000000006",
+    decimals: 18,
+    name: "Wrapped Ether",
+    version: "1"
+  )
+
+  config.chain = "base"
+  config.currency = "WETH"
+end
+```
+
+#### Token Registration Parameters
+
+| Parameter  | Required | Description                                     |
+| ---------- | -------- | ----------------------------------------------- |
+| `chain`    | Yes      | Chain name (built-in or custom registered)      |
+| `symbol`   | Yes      | Token symbol (e.g., "USDC", "WETH")             |
+| `address`  | Yes      | Token contract address                          |
+| `decimals` | Yes      | Token decimals (e.g., 6 for USDC, 18 for WETH)  |
+| `name`     | Yes      | Token name for EIP-712 domain                   |
+| `version`  | No       | EIP-712 version (default: "1")                  |
+
+**Note:** Custom chains and tokens are only supported for EVM (eip155) networks. Solana chains use a different implementation.
+
+### Accept Multiple Payment Options
+
+Allow clients to pay on any of several supported chains by using `config.accept()`:
+
+```ruby
+X402.configure do |config|
+  config.wallet_address = ENV['X402_WALLET_ADDRESS']
+
+  # Register a custom chain
+  config.register_chain(name: "polygon-amoy", chain_id: 80002, standard: "eip155")
+  config.register_token(
+    chain: "polygon-amoy",
+    symbol: "USDC",
+    address: "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582",
+    decimals: 6,
+    name: "USD Coin",
+    version: "2"
+  )
+
+  # Accept payments on multiple chains
+  config.accept(chain: "base-sepolia", currency: "USDC")
+  config.accept(chain: "polygon-amoy", currency: "USDC")
+end
+```
+
+When `config.accept()` is used, the 402 response will include all accepted payment options:
+
+```json
+{
+  "accepts": [
+    { "network": "eip155:84532", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e", ... },
+    { "network": "eip155:80002", "asset": "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582", ... }
+  ]
+}
+```
+
+Clients can then choose which chain to pay on based on their preferences or available funds.
+
+**Per-accept wallet addresses:** You can specify different recipient addresses per chain:
+
+```ruby
+config.accept(chain: "base-sepolia", currency: "USDC", wallet_address: "0xWallet1")
+config.accept(chain: "polygon-amoy", currency: "USDC", wallet_address: "0xWallet2")
+```
+
+**Fallback behavior:** If no `config.accept()` calls are made, the default `config.chain` and `config.currency` are used.
+
 ## Environment Variables
 
 Configure via environment variables:

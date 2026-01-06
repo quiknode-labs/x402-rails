@@ -8,9 +8,9 @@ X402.configure do |config|
   # Set this via environment variable: X402_WALLET_ADDRESS
   config.wallet_address = ENV.fetch("X402_WALLET_ADDRESS", nil)
 
-  # Facilitator URL (default: https://x402.org/facilitator)
+  # Facilitator URL (default: https://www.x402.org/facilitator)
   # The facilitator handles payment verification and settlement
-  config.facilitator = ENV.fetch("X402_FACILITATOR_URL", "https://x402.org/facilitator")
+  config.facilitator = ENV.fetch("X402_FACILITATOR_URL", "https://www.x402.org/facilitator")
 
   # Blockchain network to use
   # Options: "base-sepolia" (testnet), "base" (mainnet), "avalanche-fuji" (testnet), "avalanche" (mainnet)
