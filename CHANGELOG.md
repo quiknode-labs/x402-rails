@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.0] - 2025-01-07
+## [1.0.0] - 2026-01-07
 
 ### Added
 - **Protocol v2 support** - Full x402 protocol v2 compliance with CAIP-2 network identifiers and updated headers

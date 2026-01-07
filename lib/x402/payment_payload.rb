@@ -34,35 +34,56 @@ module X402
       end
     end
 
+    def solana_chain?
+      X402.solana_chain?(network)
+    end
+
+    def evm_chain?
+      !solana_chain?
+    end
+
+    def transaction
+      return nil unless solana_chain?
+      payload&.with_indifferent_access&.[](:transaction)
+    end
+
     def authorization
+      return nil if solana_chain?
       @authorization ||= payload&.with_indifferent_access&.[](:authorization)
     end
 
     def signature
+      return nil if solana_chain?
       payload&.with_indifferent_access&.[](:signature)
     end
 
     def from_address
+      return nil if solana_chain?
       authorization&.with_indifferent_access&.[](:from)
     end
 
     def to_address
+      return nil if solana_chain?
       authorization&.with_indifferent_access&.[](:to)
     end
 
     def value
+      return nil if solana_chain?
       authorization&.with_indifferent_access&.[](:value)
     end
 
     def valid_after
+      return nil if solana_chain?
       authorization&.with_indifferent_access&.[](:validAfter) || authorization&.with_indifferent_access&.[](:valid_after)
     end
 
     def valid_before
+      return nil if solana_chain?
       authorization&.with_indifferent_access&.[](:validBefore) || authorization&.with_indifferent_access&.[](:valid_before)
     end
 
     def nonce
+      return nil if solana_chain?
       authorization&.with_indifferent_access&.[](:nonce)
     end
 

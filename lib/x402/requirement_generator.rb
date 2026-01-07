@@ -38,34 +38,6 @@ module X402
       )
     end
 
-    def self.generate_for_chain(amount:, resource:, description: nil, chain:, currency:,
-                                wallet_address: nil, fee_payer: nil, version: nil)
-      config = X402.configuration
-      protocol_version = version || config.version
-      version_strategy = X402::Versions.for(protocol_version)
-
-      formatted_requirement = build_formatted_requirement(
-        amount: amount,
-        resource: resource,
-        description: description,
-        chain: chain,
-        currency: currency,
-        wallet_address: wallet_address || config.wallet_address,
-        fee_payer: fee_payer,
-        version_strategy: version_strategy
-      )
-
-      version_strategy.format_requirement_response(
-        accepts: [formatted_requirement],
-        resource: {
-          url: resource,
-          description: description || "Payment required for #{resource}",
-          mime_type: "application/json"
-        },
-        error: "Payment required to access this resource"
-      )
-    end
-
     def self.build_formatted_requirement(amount:, resource:, description:, chain:, currency:,
                                          wallet_address:, fee_payer:, version_strategy:)
       token_config = X402.token_config_for(chain, currency)
