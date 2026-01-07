@@ -69,16 +69,27 @@ module X402
 
       def render_payment_required(amount, chain: nil, currency: nil, version: nil,
                                    wallet_address: nil, fee_payer: nil, accepts: nil)
+        protocol_version = version || X402.configuration.version
+        version_strategy = X402::Versions.for(protocol_version)
+
         requirement_response = generate_payment_required_response(
           amount,
           chain: chain,
           currency: currency,
-          version: version,
+          version: protocol_version,
           wallet_address: wallet_address,
           fee_payer: fee_payer,
           accepts: accepts
         )
 
+        render_402_response(requirement_response, version_strategy)
+      end
+
+      def render_402_response(requirement_response, version_strategy)
+        if version_strategy.requirement_header_name
+          response.headers[version_strategy.requirement_header_name] =
+            Base64.strict_encode64(requirement_response.to_json)
+        end
         render json: requirement_response, status: :payment_required
       end
 
@@ -109,7 +120,7 @@ module X402
             chain: chain, currency: currency, version: protocol_version,
             wallet_address: wallet_address, fee_payer: fee_payer, accepts: accepts
           )
-          return render json: requirement_response, status: :payment_required
+          return render_402_response(requirement_response, version_strategy)
         end
 
         resource_info = requirement_data[:resource] || {}
@@ -132,7 +143,7 @@ module X402
             chain: chain, currency: currency, version: protocol_version,
             wallet_address: wallet_address, fee_payer: fee_payer, accepts: accepts
           )
-          return render json: requirement_response, status: :payment_required
+          return render_402_response(requirement_response, version_strategy)
         end
 
         request.env["x402.payment"] = {
@@ -154,7 +165,7 @@ module X402
               chain: chain, currency: currency, version: protocol_version,
               wallet_address: wallet_address, fee_payer: fee_payer, accepts: accepts
             )
-            return render json: requirement_response, status: :payment_required
+            return render_402_response(requirement_response, version_strategy)
           end
         end
 
@@ -164,14 +175,14 @@ module X402
           chain: chain, currency: currency, version: protocol_version,
           wallet_address: wallet_address, fee_payer: fee_payer, accepts: accepts
         )
-        render json: requirement_response, status: :payment_required
+        render_402_response(requirement_response, version_strategy)
       rescue X402::FacilitatorError => e
         requirement_response = generate_payment_required_response(
           amount, "Verification error: #{e.message}",
           chain: chain, currency: currency, version: protocol_version,
           wallet_address: wallet_address, fee_payer: fee_payer, accepts: accepts
         )
-        render json: requirement_response, status: :payment_required
+        render_402_response(requirement_response, version_strategy)
       end
 
       def find_matching_accept(accepts, payment_payload, version_strategy)

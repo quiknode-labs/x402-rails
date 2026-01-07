@@ -15,6 +15,10 @@ module X402
         raise NotImplementedError
       end
 
+      def requirement_header_name
+        raise NotImplementedError
+      end
+
       def format_network(internal_network)
         raise NotImplementedError
       end

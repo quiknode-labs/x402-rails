@@ -15,6 +15,10 @@ module X402
         "X-PAYMENT-RESPONSE"
       end
 
+      def requirement_header_name
+        nil
+      end
+
       def format_network(internal_network)
         internal_network
       end

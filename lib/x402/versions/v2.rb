@@ -15,6 +15,10 @@ module X402
         "PAYMENT-RESPONSE"
       end
 
+      def requirement_header_name
+        "PAYMENT-REQUIRED"
+      end
+
       def format_network(internal_network)
         X402.to_caip2(internal_network)
       end
