@@ -3,7 +3,7 @@
 module X402
   class Configuration
     attr_accessor :wallet_address, :facilitator, :chain, :currency, :optimistic,
-                  :rpc_urls, :version, :fee_payer, :custom_chains, :custom_tokens,
+                  :version, :fee_payer, :custom_chains, :custom_tokens,
                   :accepted_payments
 
     def initialize
@@ -12,7 +12,6 @@ module X402
       @chain = ENV.fetch("X402_CHAIN", "base-sepolia")
       @currency = ENV.fetch("X402_CURRENCY", "USDC")
       @optimistic = ENV.fetch("X402_OPTIMISTIC", "false") == "true"
-      @rpc_urls = {}
       @version = ENV.fetch("X402_VERSION", "2").to_i
       @fee_payer = ENV.fetch("X402_FEE_PAYER", nil)
       @custom_chains = {}

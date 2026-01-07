@@ -169,48 +169,6 @@ end
 | `currency`       | No       | `"USDC"`                         | Payment token symbol (currently only USDC supported)                              |
 | `optimistic`     | No       | `true`                           | Settlement mode (see Optimistic vs Non-Optimistic Mode below)                     |
 | `version`        | No       | `2`                              | Protocol version (1 or 2). See Protocol Versions section                          |
-| `rpc_urls`       | No       | `{}`                             | Custom RPC endpoint URLs per chain (see Custom RPC URLs below)                    |
-
-### Custom RPC URLs
-
-By default, x402-rails uses public QuickNode RPC endpoints for each supported chain. For production use or higher reliability, you can configure custom RPC URLs from providers like [QuickNode](https://www.quicknode.com/).
-
-**Configuration Priority** (highest to lowest):
-
-1. Programmatic configuration via `config.rpc_urls`
-2. Per-chain environment variables
-3. Built-in default RPC URLs
-
-#### Method 1: Programmatic Configuration
-
-Configure RPC URLs in your initializer:
-
-```ruby
-X402.configure do |config|
-  config.wallet_address = ENV['X402_WALLET_ADDRESS']
-
-  # Custom RPC URLs per chain
-  config.rpc_urls["base"] = "https://your-base-rpc.quiknode.pro/your-key"
-  config.rpc_urls["base-sepolia"] = "https://your-sepolia-rpc.quiknode.pro/your-key"
-  config.rpc_urls["avalanche"] = "https://your-avalanche-rpc.quiknode.pro/your-key"
-end
-```
-
-#### Method 2: Environment Variables
-
-Set per-chain environment variables:
-
-```bash
-# Per-chain RPC URL overrides
-X402_BASE_RPC_URL=https://your-base-rpc.quiknode.pro/your-key
-X402_BASE_SEPOLIA_RPC_URL=https://your-sepolia-rpc.quiknode.pro/your-key
-X402_AVALANCHE_RPC_URL=https://your-avalanche-rpc.quiknode.pro/your-key
-X402_AVALANCHE_FUJI_RPC_URL=https://your-fuji-rpc.quiknode.pro/your-key
-```
-
-#### Method 3: Default RPC URLs
-
-If no custom RPC URL is configured, it will default to the public QuickNode RPC urls.
 
 ### Custom Chains and Tokens
 
@@ -247,6 +205,7 @@ end
 ```
 
 #### Register a Custom Token on a Built-in Chain
+
 > **⚠️ Note:** The Facilitator used **must support** the specified chain and token to ensure proper functionality.
 
 Accept different tokens on existing chains:
@@ -272,14 +231,14 @@ end
 
 #### Token Registration Parameters
 
-| Parameter  | Required | Description                                     |
-| ---------- | -------- | ----------------------------------------------- |
-| `chain`    | Yes      | Chain name (built-in or custom registered)      |
-| `symbol`   | Yes      | Token symbol (e.g., "USDC", "WETH")             |
-| `address`  | Yes      | Token contract address                          |
-| `decimals` | Yes      | Token decimals (e.g., 6 for USDC, 18 for WETH)  |
-| `name`     | Yes      | Token name for EIP-712 domain                   |
-| `version`  | No       | EIP-712 version (default: "1")                  |
+| Parameter  | Required | Description                                    |
+| ---------- | -------- | ---------------------------------------------- |
+| `chain`    | Yes      | Chain name (built-in or custom registered)     |
+| `symbol`   | Yes      | Token symbol (e.g., "USDC", "WETH")            |
+| `address`  | Yes      | Token contract address                         |
+| `decimals` | Yes      | Token decimals (e.g., 6 for USDC, 18 for WETH) |
+| `name`     | Yes      | Token name for EIP-712 domain                  |
+| `version`  | No       | EIP-712 version (default: "1")                 |
 
 **Note:** Custom chains and tokens are only supported for EVM (eip155) networks. Solana chains use a different implementation.
 
@@ -336,13 +295,13 @@ x402-rails supports both v1 and v2 of the x402 protocol. **v2 is the default**.
 
 ### Key Differences
 
-| Feature | v1 (Legacy) | v2 (Default) |
-|---------|-------------|--------------|
-| Network format | Simple names (`base-sepolia`) | CAIP-2 (`eip155:84532`) |
-| Payment header | `X-PAYMENT` | `PAYMENT-SIGNATURE` |
-| Response header | `X-PAYMENT-RESPONSE` | `PAYMENT-RESPONSE` |
-| Requirements | Body only | `PAYMENT-REQUIRED` header + body |
-| Amount field | `maxAmountRequired` | `amount` |
+| Feature         | v1 (Legacy)                   | v2 (Default)                     |
+| --------------- | ----------------------------- | -------------------------------- |
+| Network format  | Simple names (`base-sepolia`) | CAIP-2 (`eip155:84532`)          |
+| Payment header  | `X-PAYMENT`                   | `PAYMENT-SIGNATURE`              |
+| Response header | `X-PAYMENT-RESPONSE`          | `PAYMENT-RESPONSE`               |
+| Requirements    | Body only                     | `PAYMENT-REQUIRED` header + body |
+| Amount field    | `maxAmountRequired`           | `amount`                         |
 
 ### v2 (Default)
 
@@ -397,12 +356,6 @@ X402_FACILITATOR_URL=https://x402.org/facilitator
 X402_CHAIN=base-sepolia
 X402_CURRENCY=USDC
 X402_OPTIMISTIC=true  # "true" or "false"
-
-# Custom RPC URLs (optional, per-chain overrides)
-X402_BASE_RPC_URL=https://your-base-rpc.quiknode.pro/your-key
-X402_BASE_SEPOLIA_RPC_URL=https://your-base-speoliarpc.quiknode.pro/your-key
-X402_AVALANCHE_RPC_URL=https://your-avalanche.quiknode.pro/your-key
-X402_AVALANCHE_FUJI_RPC_URL=https://your-fuji-rpc.quiknode.pro/your-key
 ```
 
 ## Examples

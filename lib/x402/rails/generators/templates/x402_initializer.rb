@@ -19,17 +19,6 @@ X402.configure do |config|
 
   # Currency symbol (currently only USDC is supported)
   config.currency = ENV.fetch("X402_CURRENCY", "USDC")
-
-  # Custom RPC URLs (optional)
-  # Use custom RPC endpoints from providers like QuickNode, Alchemy, or Infura
-  # for better reliability and rate limits. Uncomment and configure as needed:
-  #
-  # config.rpc_urls["base"] = "https://your-base-rpc.quiknode.pro/your-key"
-  # config.rpc_urls["base-sepolia"] = "https://your-sepolia-rpc.quiknode.pro/your-key"
-  # config.rpc_urls["avalanche"] = "https://your-avalanche-rpc.quiknode.pro/your-key"
-  #
-  # Or use environment variables (see README.md for details):
-  # X402_BASE_RPC_URL, X402_BASE_SEPOLIA_RPC_URL, etc.
 end
 
 # Validate configuration on initialization
