@@ -72,8 +72,6 @@ module X402
       if x402_version >= 2
         base = {
           x402Version: x402_version,
-          scheme: scheme,
-          network: version_strategy.format_network(network),
           accepted: format_accepted_for_version(version_strategy),
           payload: payload,
           extensions: {}

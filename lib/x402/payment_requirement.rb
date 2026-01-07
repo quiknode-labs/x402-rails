@@ -30,7 +30,7 @@ module X402
       v = version || @version || X402.configuration.version
       version_strategy = X402::Versions.for(v)
 
-      base = version_strategy.format_requirement(
+      version_strategy.format_requirement(
         scheme: scheme,
         network: network,
         amount: amount,
@@ -42,13 +42,6 @@ module X402
         mime_type: mime_type,
         extra: extra
       )
-
-      base[:maxAmountRequired] = amount.to_s
-      base[:description] = description if description
-      base[:resource] = resource if resource
-      base[:mimeType] = mime_type if mime_type
-
-      base
     end
 
     def to_json(*args)

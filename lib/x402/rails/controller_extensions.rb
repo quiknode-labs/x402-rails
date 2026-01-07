@@ -124,14 +124,11 @@ module X402
         end
 
         resource_info = requirement_data[:resource] || {}
-        requirement_attrs = matching_accept.merge(
-          {
-            version: protocol_version,
-            resource: resource_info[:url],
-            description: resource_info[:description],
-            mime_type: resource_info[:mimeType]
-          }.compact
-        )
+        additional_attrs = { version: protocol_version }
+        additional_attrs[:resource] = resource_info[:url] if resource_info[:url]
+        additional_attrs[:description] = resource_info[:description] if resource_info[:description]
+        additional_attrs[:mime_type] = resource_info[:mimeType] if resource_info[:mimeType]
+        requirement_attrs = matching_accept.merge(additional_attrs)
         requirement = X402::PaymentRequirement.new(requirement_attrs)
 
         validator = X402::PaymentValidator.new
@@ -183,6 +180,13 @@ module X402
           wallet_address: wallet_address, fee_payer: fee_payer, accepts: accepts
         )
         render_402_response(requirement_response, version_strategy)
+      rescue X402::ConfigurationError => e
+        requirement_response = generate_payment_required_response(
+          amount, "Configuration error: #{e.message}",
+          chain: chain, currency: currency, version: protocol_version,
+          wallet_address: wallet_address, fee_payer: fee_payer, accepts: accepts
+        )
+        render_402_response(requirement_response, version_strategy)
       end
 
       def find_matching_accept(accepts, payment_payload, version_strategy)
@@ -191,13 +195,11 @@ module X402
         accepts.find do |accept|
           accept_network = accept[:network]
           next false unless accept_network.present?
-          
+
           if accept_network.to_s.include?(":")
-            accept_network == payment_network ||
-              version_strategy.parse_network(accept_network) == payment_network
+            version_strategy.parse_network(accept_network) == payment_network
           else
-            accept_network == payment_network ||
-              version_strategy.format_network(accept_network) == payment_network
+            accept_network == payment_network
           end
         end
       end
@@ -265,8 +267,12 @@ module X402
       end
 
       def render_html_paywall(requirement_response)
-        amount_field = requirement_response[:accepts].first[:maxAmountRequired] ||
-                       requirement_response[:accepts].first[:amount]
+        accept = requirement_response[:accepts].first
+        amount_field = accept[:maxAmountRequired] || accept[:amount]
+        network = accept[:network]
+        asset_symbol = detect_asset_symbol(network)
+        decimals = detect_decimals(network)
+        formatted_amount = format('%.3f', amount_field.to_i / (10.0**decimals))
 
         html = <<~HTML
           <!DOCTYPE html>
@@ -326,10 +332,10 @@ module X402
             <div class="paywall-container">
               <h1>Payment Required</h1>
               <p>This resource requires payment to access.</p>
-              <div class="amount">$#{format('%.3f', amount_field.to_i / 1_000_000.0)}</div>
+              <div class="amount">$#{formatted_amount}</div>
               <div class="info">
-                <p><strong>Network:</strong> #{requirement_response[:accepts].first[:network]}</p>
-                <p><strong>Asset:</strong> USDC</p>
+                <p><strong>Network:</strong> #{network}</p>
+                <p><strong>Asset:</strong> #{asset_symbol}</p>
               </div>
               <p style="font-size: 0.85rem; color: #999;">
                 This resource uses the x402 payment protocol.
@@ -340,6 +346,20 @@ module X402
         HTML
 
         render html: html.html_safe, status: :payment_required
+      end
+
+      def detect_asset_symbol(network)
+        chain_name = network.to_s.include?(":") ? X402.from_caip2(network) : network
+        X402.currency_config_for_chain(chain_name)[:symbol]
+      rescue X402::ConfigurationError
+        X402.configuration.currency || "USDC"
+      end
+
+      def detect_decimals(network)
+        chain_name = network.to_s.include?(":") ? X402.from_caip2(network) : network
+        X402.currency_decimals_for_chain(chain_name)
+      rescue X402::ConfigurationError
+        6
       end
     end
   end

@@ -72,12 +72,14 @@ module X402
     "solana-devnet" => {
       symbol: "USDC",
       decimals: 6,
-      name: "USDC"
+      name: "USDC",
+      version: nil
     },
     "solana" => {
       symbol: "USDC",
       decimals: 6,
-      name: "USD Coin"
+      name: "USD Coin",
+      version: nil
     }
   }.freeze
 
@@ -167,13 +169,18 @@ module X402
     end
 
     def fee_payer_for(chain_name)
-      # Priority: 1) Programmatic config, 2) ENV variable, 3) Default from CHAINS
+      # Priority: 1) Programmatic config, 2) Per-chain ENV variable, 3) Generic ENV variable, 4) Default from CHAINS
       config = X402.configuration
 
       # Check programmatic configuration
       return config.fee_payer if config.fee_payer && !config.fee_payer.empty?
 
-      # Check environment variable
+      # Check per-chain environment variable (e.g., X402_SOLANA_DEVNET_FEE_PAYER, X402_SOLANA_FEE_PAYER)
+      env_var_name = "X402_#{chain_name.upcase.gsub('-', '_')}_FEE_PAYER"
+      env_fee_payer = ENV[env_var_name]
+      return env_fee_payer if env_fee_payer && !env_fee_payer.empty?
+
+      # Check generic environment variable
       env_fee_payer = ENV["X402_FEE_PAYER"]
       return env_fee_payer if env_fee_payer && !env_fee_payer.empty?
 
@@ -201,8 +208,10 @@ module X402
       raise(ConfigurationError, "Unknown CAIP-2 network: #{caip2_string}")
     end
 
+    SOLANA_CHAINS = %w[solana solana-devnet].freeze
+
     def solana_chain?(chain_name)
-      chain_name.start_with?("solana")
+      SOLANA_CHAINS.include?(chain_name)
     end
   end
 end
