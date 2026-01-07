@@ -18,7 +18,11 @@ module X402
         fee_payer = options[:fee_payer]
         accepts = options[:accepts]
 
-        version_strategy = X402::Versions.for(protocol_version)
+        begin
+          version_strategy = X402::Versions.for(protocol_version)
+        rescue X402::ConfigurationError => e
+          return render_configuration_error(e.message)
+        end
 
         payment_header = request.headers[version_strategy.payment_header_name]
 
@@ -91,6 +95,17 @@ module X402
             Base64.strict_encode64(requirement_response.to_json)
         end
         render json: requirement_response, status: :payment_required
+      end
+
+      def render_configuration_error(message)
+        # Use V1 as a safe fallback when version is invalid to avoid recursive errors
+        fallback_strategy = X402::Versions::V1.new
+        error_response = {
+          x402Version: 1,
+          error: "Configuration error: #{message}",
+          accepts: []
+        }
+        render_402_response(error_response, fallback_strategy)
       end
 
       def process_payment(payment_header, amount, chain: nil, currency: nil,
@@ -181,12 +196,7 @@ module X402
         )
         render_402_response(requirement_response, version_strategy)
       rescue X402::ConfigurationError => e
-        requirement_response = generate_payment_required_response(
-          amount, "Configuration error: #{e.message}",
-          chain: chain, currency: currency, version: protocol_version,
-          wallet_address: wallet_address, fee_payer: fee_payer, accepts: accepts
-        )
-        render_402_response(requirement_response, version_strategy)
+        render_configuration_error(e.message)
       end
 
       def find_matching_accept(accepts, payment_payload, version_strategy)
