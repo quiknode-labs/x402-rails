@@ -2,6 +2,8 @@
 
 ## Now supporting x402 v2!
 
+> **⚠️ Note:** This gem now defaults to x402 protocol **v2**. If you need v1 compatibility, set `config.version = 1` in your initializer. See [Protocol Versions](#protocol-versions) for details on the differences.
+
 ![Coverage](./coverage/coverage.svg)
 
 Accept instant blockchain micropayments in your Rails applications using the [x402 payment protocol](https://www.x402.org/).
@@ -331,6 +333,16 @@ config.accept(chain: "polygon-amoy", currency: "USDC", wallet_address: "0xWallet
 
 x402-rails supports both v1 and v2 of the x402 protocol. **v2 is the default**.
 
+### Key Differences
+
+| Feature | v1 (Legacy) | v2 (Default) |
+|---------|-------------|--------------|
+| Network format | Simple names (`base-sepolia`) | CAIP-2 (`eip155:84532`) |
+| Payment header | `X-PAYMENT` | `PAYMENT-SIGNATURE` |
+| Response header | `X-PAYMENT-RESPONSE` | `PAYMENT-RESPONSE` |
+| Requirements | Body only | `PAYMENT-REQUIRED` header + body |
+| Amount field | `maxAmountRequired` | `amount` |
+
 ### v2 (Default)
 
 ```ruby
@@ -340,7 +352,7 @@ X402.configure do |config|
 end
 ```
 
-v2 uses CAIP-2 network identifiers (`eip155:84532`) and the `PAYMENT-SIGNATURE` header.
+v2 uses CAIP-2 network identifiers (`eip155:84532`) and the `PAYMENT-SIGNATURE` header. Payment requirements are sent in both the `PAYMENT-REQUIRED` header (base64-encoded) and the response body (JSON).
 
 ### v1 (Legacy)
 
@@ -351,7 +363,7 @@ X402.configure do |config|
 end
 ```
 
-v1 uses simple network names (`base-sepolia`) and the `X-PAYMENT` header.
+v1 uses simple network names (`base-sepolia`) and the `X-PAYMENT` header. Payment requirements are sent only in the response body.
 
 ### Per-Endpoint Version
 
