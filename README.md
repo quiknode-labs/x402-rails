@@ -247,6 +247,7 @@ end
 ```
 
 #### Register a Custom Token on a Built-in Chain
+> **⚠️ Note:** The Facilitator used **must support** the specified chain and token to ensure proper functionality.
 
 Accept different tokens on existing chains:
 
