@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.authors = ["QuickNode"]
   spec.email = ["zach+x402@quiknode.io"]
 
-  spec.summary = "Rails integration for x402 payment protocol"
+  spec.summary = "Rails integration for x402 payment protocol (supporting x402 v2)."
   spec.description = "Accept instant blockchain micropayments in Rails applications using the x402 protocol."
   spec.homepage = "https://github.com/quiknode-labs/x402-rails"
   spec.license = "MIT"
