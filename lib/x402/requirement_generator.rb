@@ -2,54 +2,97 @@
 
 module X402
   class RequirementGenerator
-    def self.generate(amount:, resource:, description: nil, chain: nil, currency: nil)
+    def self.generate(amount:, resource:, description: nil, chain: nil, currency: nil,
+                      wallet_address: nil, fee_payer: nil, version: nil, accepts: nil)
       config = X402.configuration
-      chain_name = chain || config.chain
+      protocol_version = version || config.version
+      version_strategy = X402::Versions.for(protocol_version)
 
-      # Get chain and currency configuration for this specific chain
-      chain_config = X402.chain_config(chain_name)
-      currency_config = X402.currency_config_for_chain(chain_name)
+      accepted_payments = resolve_accepted_payments(
+        accepts: accepts,
+        chain: chain,
+        currency: currency
+      )
 
-      # Convert amount to atomic units
-      atomic_amount = convert_to_atomic(amount, currency_config[:decimals])
+      formatted_accepts = accepted_payments.map do |payment|
+        build_formatted_requirement(
+          amount: amount,
+          resource: resource,
+          description: description,
+          chain: payment[:chain],
+          currency: payment[:currency],
+          wallet_address: wallet_address || payment[:wallet_address] || config.wallet_address,
+          fee_payer: fee_payer,
+          version_strategy: version_strategy
+        )
+      end
 
-      # Get asset address (USDC contract address for the chain)
-      asset_address = X402.usdc_address_for(chain_name)
+      version_strategy.format_requirement_response(
+        accepts: formatted_accepts,
+        resource: {
+          url: resource,
+          description: description || "Payment required for #{resource}",
+          mime_type: "application/json"
+        },
+        error: "Payment required to access this resource"
+      )
+    end
 
-      # Build EIP-712 domain info (required for signature verification)
-      # IMPORTANT: The name must match what the USDC contract returns for name()
-      # Testnets use "USDC", mainnets use "USD Coin" or "USDC" depending on chain
-      eip712_domain = {
-        name: currency_config[:name],
-        version: currency_config[:version]
-      }
+    def self.build_formatted_requirement(amount:, resource:, description:, chain:, currency:,
+                                         wallet_address:, fee_payer:, version_strategy:)
+      token_config = X402.token_config_for(chain, currency)
+      asset_address = X402.asset_address_for(chain, currency)
+      atomic_amount = convert_to_atomic(amount, token_config[:decimals])
+      extra_data = build_extra_data(chain, token_config, fee_payer)
 
-      # Create payment requirement
-      requirement = PaymentRequirement.new(
+      internal_requirement = {
         scheme: "exact",
-        network: chain_name,
-        max_amount_required: atomic_amount,
+        network: chain,
+        amount: atomic_amount,
         asset: asset_address,
-        pay_to: config.wallet_address,
+        pay_to: wallet_address,
         resource: resource,
         description: description || "Payment required for #{resource}",
         max_timeout_seconds: 600,
         mime_type: "application/json",
-        extra: eip712_domain
-      )
-
-      # Build full response
-      {
-        x402Version: 1,
-        error: "Payment required to access this resource",
-        accepts: [requirement.to_h]
+        extra: extra_data
       }
+
+      version_strategy.format_requirement(internal_requirement)
+    end
+
+    def self.resolve_accepted_payments(accepts:, chain:, currency:)
+      config = X402.configuration
+
+      if accepts && !accepts.empty?
+        accepts.map do |acc|
+          {
+            chain: acc[:chain],
+            currency: acc[:currency] || "USDC",
+            wallet_address: acc[:wallet_address]
+          }
+        end
+      elsif chain
+        [{ chain: chain, currency: currency || config.currency, wallet_address: nil }]
+      else
+        config.effective_accepted_payments
+      end
     end
 
     def self.convert_to_atomic(amount, decimals)
-      # Convert USD amount to atomic units
-      # For USDC with 6 decimals: $0.001 = 1000 atomic units
       (amount.to_f * (10**decimals)).to_i
+    end
+
+    def self.build_extra_data(chain_name, token_config, fee_payer_override)
+      if X402.solana_chain?(chain_name)
+        fee_payer = fee_payer_override || X402.fee_payer_for(chain_name)
+        { feePayer: fee_payer }
+      else
+        {
+          name: token_config[:name],
+          version: token_config[:version]
+        }
+      end
     end
   end
 end

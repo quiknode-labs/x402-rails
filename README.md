@@ -1,5 +1,9 @@
 # x402-rails
 
+## Now supporting x402 v2!
+
+> **⚠️ Note:** This gem now defaults to x402 protocol **v2**. If you need v1 compatibility, set `config.version = 1` in your initializer. See [Protocol Versions](#protocol-versions) for details on the differences.
+
 ![Coverage](./coverage/coverage.svg)
 
 Accept instant blockchain micropayments in your Rails applications using the [x402 payment protocol](https://www.x402.org/).
@@ -164,48 +168,180 @@ end
 | `chain`          | No       | `"base-sepolia"`                 | Blockchain network to use (`base-sepolia`, `base`, `avalanche-fuji`, `avalanche`) |
 | `currency`       | No       | `"USDC"`                         | Payment token symbol (currently only USDC supported)                              |
 | `optimistic`     | No       | `true`                           | Settlement mode (see Optimistic vs Non-Optimistic Mode below)                     |
-| `rpc_urls`       | No       | `{}`                             | Custom RPC endpoint URLs per chain (see Custom RPC URLs below)                    |
+| `version`        | No       | `2`                              | Protocol version (1 or 2). See Protocol Versions section                          |
 
-### Custom RPC URLs
+### Custom Chains and Tokens
 
-By default, x402-rails uses public QuickNode RPC endpoints for each supported chain. For production use or higher reliability, you can configure custom RPC URLs from providers like [QuickNode](https://www.quicknode.com/).
+You can register custom EVM chains and tokens beyond the built-in options.
 
-**Configuration Priority** (highest to lowest):
+#### Register a Custom Chain
 
-1. Programmatic configuration via `config.rpc_urls`
-2. Per-chain environment variables
-3. Built-in default RPC URLs
-
-#### Method 1: Programmatic Configuration
-
-Configure RPC URLs in your initializer:
+Add support for any EVM-compatible chain:
 
 ```ruby
 X402.configure do |config|
   config.wallet_address = ENV['X402_WALLET_ADDRESS']
 
-  # Custom RPC URLs per chain
-  config.rpc_urls["base"] = "https://your-base-rpc.quiknode.pro/your-key"
-  config.rpc_urls["base-sepolia"] = "https://your-sepolia-rpc.quiknode.pro/your-key"
-  config.rpc_urls["avalanche"] = "https://your-avalanche-rpc.quiknode.pro/your-key"
+  # Register Polygon mainnet
+  config.register_chain(
+    name: "polygon",
+    chain_id: 137,
+    standard: "eip155"
+  )
+
+  # Register the token for that chain
+  config.register_token(
+    chain: "polygon",
+    symbol: "USDC",
+    address: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+    decimals: 6,
+    name: "USD Coin",
+    version: "2"
+  )
+
+  config.chain = "polygon"
+  config.currency = "USDC"
 end
 ```
 
-#### Method 2: Environment Variables
+#### Register a Custom Token on a Built-in Chain
 
-Set per-chain environment variables:
+> **⚠️ Note:** The Facilitator used **must support** the specified chain and token to ensure proper functionality.
 
-```bash
-# Per-chain RPC URL overrides
-X402_BASE_RPC_URL=https://your-base-rpc.quiknode.pro/your-key
-X402_BASE_SEPOLIA_RPC_URL=https://your-sepolia-rpc.quiknode.pro/your-key
-X402_AVALANCHE_RPC_URL=https://your-avalanche-rpc.quiknode.pro/your-key
-X402_AVALANCHE_FUJI_RPC_URL=https://your-fuji-rpc.quiknode.pro/your-key
+Accept different tokens on existing chains:
+
+```ruby
+X402.configure do |config|
+  config.wallet_address = ENV['X402_WALLET_ADDRESS']
+
+  # Accept WETH on Base instead of USDC
+  config.register_token(
+    chain: "base",
+    symbol: "WETH",
+    address: "0x4200000000000000000000000000000000000006",
+    decimals: 18,
+    name: "Wrapped Ether",
+    version: "1"
+  )
+
+  config.chain = "base"
+  config.currency = "WETH"
+end
 ```
 
-#### Method 3: Default RPC URLs
+#### Token Registration Parameters
 
-If no custom RPC URL is configured, it will default to the public QuickNode RPC urls.
+| Parameter  | Required | Description                                    |
+| ---------- | -------- | ---------------------------------------------- |
+| `chain`    | Yes      | Chain name (built-in or custom registered)     |
+| `symbol`   | Yes      | Token symbol (e.g., "USDC", "WETH")            |
+| `address`  | Yes      | Token contract address                         |
+| `decimals` | Yes      | Token decimals (e.g., 6 for USDC, 18 for WETH) |
+| `name`     | Yes      | Token name for EIP-712 domain                  |
+| `version`  | No       | EIP-712 version (default: "1")                 |
+
+**Note:** Custom chains and tokens are only supported for EVM (eip155) networks. Solana chains use a different implementation.
+
+### Accept Multiple Payment Options
+
+Allow clients to pay on any of several supported chains by using `config.accept()`:
+
+```ruby
+X402.configure do |config|
+  config.wallet_address = ENV['X402_WALLET_ADDRESS']
+
+  # Register a custom chain
+  config.register_chain(name: "polygon-amoy", chain_id: 80002, standard: "eip155")
+  config.register_token(
+    chain: "polygon-amoy",
+    symbol: "USDC",
+    address: "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582",
+    decimals: 6,
+    name: "USD Coin",
+    version: "2"
+  )
+
+  # Accept payments on multiple chains
+  config.accept(chain: "base-sepolia", currency: "USDC")
+  config.accept(chain: "polygon-amoy", currency: "USDC")
+end
+```
+
+When `config.accept()` is used, the 402 response will include all accepted payment options:
+
+```json
+{
+  "accepts": [
+    { "network": "eip155:84532", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e", ... },
+    { "network": "eip155:80002", "asset": "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582", ... }
+  ]
+}
+```
+
+Clients can then choose which chain to pay on based on their preferences or available funds.
+
+**Per-accept wallet addresses:** You can specify different recipient addresses per chain:
+
+```ruby
+config.accept(chain: "base-sepolia", currency: "USDC", wallet_address: "0xWallet1")
+config.accept(chain: "polygon-amoy", currency: "USDC", wallet_address: "0xWallet2")
+```
+
+**Fallback behavior:** If no `config.accept()` calls are made, the default `config.chain` and `config.currency` are used.
+
+## Protocol Versions
+
+x402-rails supports both v1 and v2 of the x402 protocol. **v2 is the default**.
+
+### Key Differences
+
+| Feature         | v1 (Legacy)                   | v2 (Default)                     |
+| --------------- | ----------------------------- | -------------------------------- |
+| Network format  | Simple names (`base-sepolia`) | CAIP-2 (`eip155:84532`)          |
+| Payment header  | `X-PAYMENT`                   | `PAYMENT-SIGNATURE`              |
+| Response header | `X-PAYMENT-RESPONSE`          | `PAYMENT-RESPONSE`               |
+| Requirements    | Body only                     | `PAYMENT-REQUIRED` header + body |
+| Amount field    | `maxAmountRequired`           | `amount`                         |
+
+### v2 (Default)
+
+```ruby
+X402.configure do |config|
+  config.wallet_address = ENV['X402_WALLET_ADDRESS']
+  config.version = 2  # Default, can be omitted
+end
+```
+
+v2 uses CAIP-2 network identifiers (`eip155:84532`) and the `PAYMENT-SIGNATURE` header. Payment requirements are sent in both the `PAYMENT-REQUIRED` header (base64-encoded) and the response body (JSON).
+
+### v1 (Legacy)
+
+```ruby
+X402.configure do |config|
+  config.wallet_address = ENV['X402_WALLET_ADDRESS']
+  config.version = 1
+end
+```
+
+v1 uses simple network names (`base-sepolia`) and the `X-PAYMENT` header. Payment requirements are sent only in the response body.
+
+### Per-Endpoint Version
+
+Override the version for specific endpoints:
+
+```ruby
+def premium_v2
+  x402_paywall(amount: 0.001, version: 2)
+  return if performed?
+  render json: { data: "v2 endpoint" }
+end
+
+def legacy_v1
+  x402_paywall(amount: 0.001, version: 1)
+  return if performed?
+  render json: { data: "v1 endpoint" }
+end
+```
 
 ## Environment Variables
 
@@ -220,12 +356,6 @@ X402_FACILITATOR_URL=https://x402.org/facilitator
 X402_CHAIN=base-sepolia
 X402_CURRENCY=USDC
 X402_OPTIMISTIC=true  # "true" or "false"
-
-# Custom RPC URLs (optional, per-chain overrides)
-X402_BASE_RPC_URL=https://your-base-rpc.quiknode.pro/your-key
-X402_BASE_SEPOLIA_RPC_URL=https://your-base-speoliarpc.quiknode.pro/your-key
-X402_AVALANCHE_RPC_URL=https://your-avalanche.quiknode.pro/your-key
-X402_AVALANCHE_FUJI_RPC_URL=https://your-fuji-rpc.quiknode.pro/your-key
 ```
 
 ## Examples

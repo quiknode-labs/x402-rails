@@ -11,110 +11,215 @@ module X402
 
       def x402_paywall(options = {})
         amount = options[:amount] or raise ArgumentError, "amount is required"
-        chain = options[:chain] || X402.configuration.chain
-        currency = options[:currency] || X402.configuration.currency
+        chain = options[:chain]
+        currency = options[:currency]
+        protocol_version = options[:version] || X402.configuration.version
+        wallet_address = options[:wallet_address]
+        fee_payer = options[:fee_payer]
+        accepts = options[:accepts]
 
-        # Check if payment header is present
-        payment_header = request.headers["X-PAYMENT"]
-
-        if payment_header.nil? || payment_header.empty?
-          # No payment provided, return 402 with requirements
-          return render_payment_required(amount, chain, currency)
+        begin
+          version_strategy = X402::Versions.for(protocol_version)
+        rescue X402::ConfigurationError => e
+          return render_configuration_error(e.message)
         end
 
-        # Payment provided, validate it
-        process_payment(payment_header, amount, chain, currency)
+        payment_header = request.headers[version_strategy.payment_header_name]
+
+        if payment_header.nil? || payment_header.empty?
+          return render_payment_required(
+            amount,
+            chain: chain,
+            currency: currency,
+            version: protocol_version,
+            wallet_address: wallet_address,
+            fee_payer: fee_payer,
+            accepts: accepts
+          )
+        end
+
+        process_payment(
+          payment_header, amount,
+          chain: chain,
+          currency: currency,
+          version: protocol_version,
+          wallet_address: wallet_address,
+          fee_payer: fee_payer,
+          accepts: accepts
+        )
       end
 
       private
 
-      def generate_payment_required_response(amount, chain, currency, error_message = nil)
+      def generate_payment_required_response(amount, error_message = nil,
+                                              chain: nil, currency: nil, version: nil,
+                                              wallet_address: nil, fee_payer: nil, accepts: nil)
+        protocol_version = version || X402.configuration.version
+
         requirement_response = X402::RequirementGenerator.generate(
           amount: amount,
           resource: request.original_url,
           description: "Payment required for #{request.path}",
           chain: chain,
-          currency: currency
+          currency: currency,
+          version: protocol_version,
+          wallet_address: wallet_address,
+          fee_payer: fee_payer,
+          accepts: accepts
         )
         requirement_response[:error] = error_message if error_message
         requirement_response
       end
 
-      def render_payment_required(amount, chain, currency)
-        requirement_response = generate_payment_required_response(amount, chain, currency)
+      def render_payment_required(amount, chain: nil, currency: nil, version: nil,
+                                   wallet_address: nil, fee_payer: nil, accepts: nil)
+        protocol_version = version || X402.configuration.version
+        version_strategy = X402::Versions.for(protocol_version)
 
-        # Detect if request is from browser or API client
-        # if browser_request?
-        #   render_html_paywall(requirement_response)
-        # else
-          render json: requirement_response, status: :payment_required
-        # end
+        requirement_response = generate_payment_required_response(
+          amount,
+          chain: chain,
+          currency: currency,
+          version: protocol_version,
+          wallet_address: wallet_address,
+          fee_payer: fee_payer,
+          accepts: accepts
+        )
+
+        render_402_response(requirement_response, version_strategy)
       end
 
-      def process_payment(payment_header, amount, chain, currency)
-        # Parse payment payload
+      def render_402_response(requirement_response, version_strategy)
+        if version_strategy.requirement_header_name
+          response.headers[version_strategy.requirement_header_name] =
+            Base64.strict_encode64(requirement_response.to_json)
+        end
+        render json: requirement_response, status: :payment_required
+      end
+
+      def render_configuration_error(message)
+        # Use V1 as a safe fallback when version is invalid to avoid recursive errors
+        fallback_strategy = X402::Versions::V1.new
+        error_response = {
+          x402Version: 1,
+          error: "Configuration error: #{message}",
+          accepts: []
+        }
+        render_402_response(error_response, fallback_strategy)
+      end
+
+      def process_payment(payment_header, amount, chain: nil, currency: nil,
+                          version: nil, wallet_address: nil, fee_payer: nil, accepts: nil)
+        protocol_version = version || X402.configuration.version
+        version_strategy = X402::Versions.for(protocol_version)
+
         payment_payload = X402::PaymentPayload.from_header(payment_header)
 
-        # Generate requirement for validation (must match the 402 response exactly!)
         requirement_data = X402::RequirementGenerator.generate(
           amount: amount,
           resource: request.original_url,
           description: "Payment required for #{request.path}",
           chain: chain,
-          currency: currency
+          currency: currency,
+          version: protocol_version,
+          wallet_address: wallet_address,
+          fee_payer: fee_payer,
+          accepts: accepts
         )
 
-        requirement = X402::PaymentRequirement.new(requirement_data[:accepts].first)
+        matching_accept = find_matching_accept(requirement_data[:accepts], payment_payload, version_strategy)
 
-        # Validate payment (verify signature, but don't settle on blockchain yet)
+        unless matching_accept
+          requirement_response = generate_payment_required_response(
+            amount, "Payment network not accepted: #{payment_payload.network}",
+            chain: chain, currency: currency, version: protocol_version,
+            wallet_address: wallet_address, fee_payer: fee_payer, accepts: accepts
+          )
+          return render_402_response(requirement_response, version_strategy)
+        end
+
+        resource_info = requirement_data[:resource] || {}
+        additional_attrs = { version: protocol_version }
+        additional_attrs[:resource] = resource_info[:url] if resource_info[:url]
+        additional_attrs[:description] = resource_info[:description] if resource_info[:description]
+        additional_attrs[:mime_type] = resource_info[:mimeType] if resource_info[:mimeType]
+        requirement_attrs = matching_accept.merge(additional_attrs)
+        requirement = X402::PaymentRequirement.new(requirement_attrs)
+
         validator = X402::PaymentValidator.new
         validation_result = validator.validate(payment_payload, requirement)
 
         unless validation_result[:valid]
-          requirement_response = generate_payment_required_response(amount, chain, currency, validation_result[:error])
-          return render json: requirement_response, status: :payment_required
+          requirement_response = generate_payment_required_response(
+            amount, validation_result[:error],
+            chain: chain, currency: currency, version: protocol_version,
+            wallet_address: wallet_address, fee_payer: fee_payer, accepts: accepts
+          )
+          return render_402_response(requirement_response, version_strategy)
         end
 
-        # Store payment info and requirement in request environment
         request.env["x402.payment"] = {
           payer: validation_result[:payer],
           amount: payment_payload.value,
           network: payment_payload.network,
           payload: payment_payload,
-          requirement: requirement
+          requirement: requirement,
+          version: protocol_version
         }
 
-        # If non-optimistic mode, settle payment synchronously before continuing
         unless X402.configuration.optimistic
           settlement_result = settle_payment_now
 
-          # If settlement failed, abort and return 402 with payment requirements
           if settlement_result.nil? || !settlement_result.success?
             error_message = settlement_result&.error_reason || "Settlement failed"
-            requirement_response = generate_payment_required_response(amount, chain, currency, "failed to settle payment: #{error_message}")
-            return render json: requirement_response, status: :payment_required
+            requirement_response = generate_payment_required_response(
+              amount, "failed to settle payment: #{error_message}",
+              chain: chain, currency: currency, version: protocol_version,
+              wallet_address: wallet_address, fee_payer: fee_payer, accepts: accepts
+            )
+            return render_402_response(requirement_response, version_strategy)
           end
         end
 
-        # Payment verified, continue with action
-        # In optimistic mode, settlement will happen automatically via after_action callback
       rescue X402::InvalidPaymentError => e
-        requirement_response = generate_payment_required_response(amount, chain, currency, "Invalid payment: #{e.message}")
-        render json: requirement_response, status: :payment_required
+        requirement_response = generate_payment_required_response(
+          amount, "Invalid payment: #{e.message}",
+          chain: chain, currency: currency, version: protocol_version,
+          wallet_address: wallet_address, fee_payer: fee_payer, accepts: accepts
+        )
+        render_402_response(requirement_response, version_strategy)
       rescue X402::FacilitatorError => e
-        requirement_response = generate_payment_required_response(amount, chain, currency, "Verification error: #{e.message}")
-        render json: requirement_response, status: :payment_required
+        requirement_response = generate_payment_required_response(
+          amount, "Verification error: #{e.message}",
+          chain: chain, currency: currency, version: protocol_version,
+          wallet_address: wallet_address, fee_payer: fee_payer, accepts: accepts
+        )
+        render_402_response(requirement_response, version_strategy)
+      rescue X402::ConfigurationError => e
+        render_configuration_error(e.message)
+      end
+
+      def find_matching_accept(accepts, payment_payload, version_strategy)
+        payment_network = payment_payload.network
+
+        accepts.find do |accept|
+          accept_network = accept[:network]
+          next false unless accept_network.present?
+
+          if accept_network.to_s.include?(":")
+            version_strategy.parse_network(accept_network) == payment_network
+          else
+            accept_network == payment_network
+          end
+        end
       end
 
       def settle_x402_payment_if_needed
-        # Only run in optimistic mode (non-optimistic settles synchronously)
         return unless X402.configuration.optimistic
 
-        # Only settle if payment was verified
         payment_info = request.env["x402.payment"]
         return unless payment_info
 
-        # Only settle if response is 2xx (success)
         return unless response.status >= 200 && response.status < 300
 
         perform_settlement(payment_info)
@@ -127,7 +232,6 @@ module X402
         ::Rails.logger.info("=== X402 Non-Optimistic Settlement (before response) ===")
         settlement_result = perform_settlement(payment_info)
 
-        # Store settlement result for later use (e.g., adding to response body)
         request.env["x402.settlement_result"] = settlement_result
         settlement_result
       end
@@ -141,19 +245,19 @@ module X402
           ::Rails.logger.info("Requirement class: #{payment_info[:requirement].class}")
           ::Rails.logger.info("Requirement hash: #{payment_info[:requirement].to_h.inspect}")
 
+          protocol_version = payment_info[:version] || X402.configuration.version
+          version_strategy = X402::Versions.for(protocol_version)
+
           facilitator_client = X402::FacilitatorClient.new
           settlement_result = facilitator_client.settle(
             payment_info[:payload],
-            payment_info[:requirement].to_h
+            payment_info[:requirement].to_h(version: protocol_version)
           )
 
           if settlement_result.success?
-            # Add settlement response header
-            response.headers["X-PAYMENT-RESPONSE"] = settlement_result.to_base64
+            response.headers[version_strategy.response_header_name] = settlement_result.to_base64
             ::Rails.logger.info("x402 settlement successful: #{settlement_result.transaction}")
           else
-            # Settlement failed - in optimistic mode, user already got the service
-            # In non-optimistic mode, this will be caught before the response is sent
             ::Rails.logger.error("x402 settlement failed: #{settlement_result.error_reason}")
           end
 
@@ -164,92 +268,6 @@ module X402
         end
       end
 
-      def browser_request?
-        # If Accept header explicitly requests JSON, return JSON even from browsers
-        accept_header = request.headers["Accept"].to_s
-        return false if accept_header.include?("application/json")
-
-        # Otherwise, check User-Agent for browser indicators
-        user_agent = request.headers["User-Agent"].to_s
-        user_agent.match?(/(Mozilla|Chrome|Safari|Firefox|Edge|Opera)/i)
-      end
-
-      def render_html_paywall(requirement_response)
-        html = <<~HTML
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Payment Required</title>
-            <style>
-              body {
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-                margin: 0;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              }
-              .paywall-container {
-                background: white;
-                padding: 3rem;
-                border-radius: 1rem;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                max-width: 500px;
-                text-align: center;
-              }
-              h1 {
-                color: #333;
-                margin-bottom: 1rem;
-                font-size: 2rem;
-              }
-              p {
-                color: #666;
-                line-height: 1.6;
-                margin-bottom: 2rem;
-              }
-              .amount {
-                font-size: 2.5rem;
-                font-weight: bold;
-                color: #667eea;
-                margin: 1.5rem 0;
-              }
-              .info {
-                background: #f7f7f7;
-                padding: 1rem;
-                border-radius: 0.5rem;
-                margin: 1.5rem 0;
-                font-size: 0.9rem;
-              }
-              code {
-                background: #e0e0e0;
-                padding: 0.2rem 0.5rem;
-                border-radius: 0.25rem;
-                font-family: monospace;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="paywall-container">
-              <h1>💳 Payment Required</h1>
-              <p>This resource requires payment to access.</p>
-              <div class="amount">$#{format('%.3f', requirement_response[:accepts].first[:maxAmountRequired].to_i / 1_000_000.0)}</div>
-              <div class="info">
-                <p><strong>Network:</strong> #{requirement_response[:accepts].first[:network]}</p>
-                <p><strong>Asset:</strong> USDC</p>
-                <p><strong>Resource:</strong> #{requirement_response[:accepts].first[:resource]}</p>
-              </div>
-              <p style="font-size: 0.85rem; color: #999;">
-                This resource uses the x402 payment protocol.
-                API clients can make payments programmatically by including the X-PAYMENT header.
-              </p>
-            </div>
-          </body>
-          </html>
-        HTML
-
-        render html: html.html_safe, status: :payment_required
-      end
     end
   end
 end

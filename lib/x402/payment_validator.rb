@@ -19,17 +19,26 @@ module X402
         return validation_error("Network mismatch: expected #{requirement.network}, got #{payment_payload.network}")
       end
 
-      # Validate recipient address
-      unless payment_payload.to_address&.downcase == requirement.pay_to&.downcase
-        return validation_error("Recipient mismatch: expected #{requirement.pay_to}, got #{payment_payload.to_address}")
-      end
+      # For EVM chains, validate recipient and amount locally before calling facilitator
+      # For Solana chains, the facilitator handles all validation of the transaction
+      if payment_payload.evm_chain?
+        # Validate recipient address
+        unless payment_payload.to_address&.downcase == requirement.pay_to&.downcase
+          return validation_error("Recipient mismatch: expected #{requirement.pay_to}, got #{payment_payload.to_address}")
+        end
 
-      # Validate amount
-      payment_value = payment_payload.value.to_i
-      required_value = requirement.max_amount_required.to_i
+        # Validate amount
+        payment_value = payment_payload.value.to_i
+        required_value = requirement.max_amount_required.to_i
 
-      if payment_value < required_value
-        return validation_error("Insufficient amount: expected at least #{required_value}, got #{payment_value}")
+        if payment_value < required_value
+          return validation_error("Insufficient amount: expected at least #{required_value}, got #{payment_value}")
+        end
+      else
+        # Solana: verify transaction payload exists
+        unless payment_payload.transaction
+          return validation_error("Solana payment missing transaction payload")
+        end
       end
 
       # Call facilitator to verify payment (does NOT settle on blockchain yet)
