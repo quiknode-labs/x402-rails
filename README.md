@@ -419,6 +419,8 @@ The gem raises these errors:
 - [x402 Protocol Docs](https://docs.cdp.coinbase.com/x402)
 - [GitHub Repository](https://github.com/coinbase/x402)
 - [Facilitator API](https://x402.org/facilitator)
+- [Step-by-Step Rails Integration Guide](https://www.quicknode.com/guides/infrastructure/x402-payment-integration-with-rails)
+
 
 ## License
 
