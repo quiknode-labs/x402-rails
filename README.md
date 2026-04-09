@@ -8,7 +8,7 @@
 
 Accept instant blockchain micropayments in your Rails applications using the [x402 payment protocol](https://www.x402.org/).
 
-Supports Base, avalanche, and other blockchain networks.
+Supports 18 networks including Base, Polygon, Avalanche, Sei, Solana, and more.
 
 ## Features
 
@@ -18,7 +18,7 @@ Supports Base, avalanche, and other blockchain networks.
 - **$0.001 minimum** payment amounts
 - **Optimistic & non-optimistic** settlement modes
 - **Automatic settlement** after successful responses
-- **Browser paywall** and API support
+- **API paywall** with 402 payment-required responses
 - **Rails 7.0+** compatible
 
 ## Example Video
@@ -145,7 +145,10 @@ X402.configure do |config|
   config.facilitator = ENV.fetch("X402_FACILITATOR_URL", "https://x402.org/facilitator")
 
   # Blockchain network (default: "base-sepolia")
-  # Options: "base-sepolia", "base", "avalanche-fuji", "avalanche"
+  # Built-in: base, base-sepolia, polygon, polygon-amoy, avalanche, avalanche-fuji,
+  #           sei, sei-testnet, iotex, peaq, xlayer, xlayer-testnet,
+  #           skale-base, skale-base-sepolia, kiteai, kiteai-testnet,
+  #           solana, solana-devnet
   config.chain = ENV.fetch("X402_CHAIN", "base-sepolia")
 
   # Payment token (default: "USDC")
@@ -165,7 +168,7 @@ end
 | ---------------- | -------- | -------------------------------- | --------------------------------------------------------------------------------- |
 | `wallet_address` | **Yes**  | -                                | Your Ethereum wallet address where payments will be received                      |
 | `facilitator`    | No       | `"https://x402.org/facilitator"` | Facilitator service URL for payment verification and settlement                   |
-| `chain`          | No       | `"base-sepolia"`                 | Blockchain network to use (`base-sepolia`, `base`, `avalanche-fuji`, `avalanche`) |
+| `chain`          | No       | `"base-sepolia"`                 | Blockchain network (see built-in list above) |
 | `currency`       | No       | `"USDC"`                         | Payment token symbol (currently only USDC supported)                              |
 | `optimistic`     | No       | `true`                           | Settlement mode (see Optimistic vs Non-Optimistic Mode below)                     |
 | `version`        | No       | `2`                              | Protocol version (1 or 2). See Protocol Versions section                          |
@@ -240,7 +243,7 @@ end
 | `name`     | Yes      | Token name for EIP-712 domain                  |
 | `version`  | No       | EIP-712 version (default: "1")                 |
 
-**Note:** Custom chains and tokens are only supported for EVM (eip155) networks. Solana chains use a different implementation.
+**Note:** Custom chains support both EVM (`eip155`) and Solana (`solana`) standards. Custom tokens can be registered on any chain.
 
 ### Accept Multiple Payment Options
 
