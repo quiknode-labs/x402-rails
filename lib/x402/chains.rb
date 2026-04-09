@@ -63,11 +63,11 @@ module X402
     # --- SKALE ---
     "skale-base" => {
       chain_id: 1_187_947_933,
-      explorer_url: "https://elated-tan-skat.explorer.mainnet.skalenodes.com",
+      explorer_url: "https://skale-base-explorer.skalenodes.com",
     },
     "skale-base-sepolia" => {
       chain_id: 324_705_682,
-      explorer_url: "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com",
+      explorer_url: "https://base-sepolia-testnet-explorer.skalenodes.com",
     },
 
     # --- KiteAI ---
