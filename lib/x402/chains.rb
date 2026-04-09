@@ -2,11 +2,12 @@
 
 module X402
   # Currency config constants for EIP-712 signature domain.
-  # The `name` field must match the on-chain ERC-20 name() value.
-  USDC_V2 = { symbol: "USDC", decimals: 6, name: "USD Coin", version: "2" }.freeze
-  USDC_V2_TESTNET = { symbol: "USDC", decimals: 6, name: "USDC", version: "2" }.freeze
-  USDC_DEFAULT = { symbol: "USDC", decimals: 6, name: "USDC", version: nil }.freeze
-  USDC_SOL_MAINNET = { symbol: "USDC", decimals: 6, name: "USD Coin", version: nil }.freeze
+  # The `name` field must match the on-chain ERC-20 name() return value.
+  # The `version` field must match the EIP-712 domain version.
+  USDC_NAMED_USD_COIN_V2 = { symbol: "USDC", decimals: 6, name: "USD Coin", version: "2" }.freeze
+  USDC_NAMED_USDC_V2 = { symbol: "USDC", decimals: 6, name: "USDC", version: "2" }.freeze
+  USDC_NAMED_USDC = { symbol: "USDC", decimals: 6, name: "USDC", version: nil }.freeze
+  USDC_NAMED_USD_COIN = { symbol: "USDC", decimals: 6, name: "USD Coin", version: nil }.freeze
 
   # Unified chain registry — single source of truth for all chain metadata.
   # Each entry contains: chain_id, caip2, currency, and optionally usdc_address, explorer_url, fee_payer.
@@ -17,14 +18,14 @@ module X402
       caip2: "eip155:8453",
       usdc_address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       explorer_url: "https://basescan.org",
-      currency: USDC_V2,
+      currency: USDC_NAMED_USD_COIN_V2,
     },
     "base-sepolia" => {
       chain_id: 84532,
       caip2: "eip155:84532",
       usdc_address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       explorer_url: "https://sepolia.basescan.org",
-      currency: USDC_V2_TESTNET,
+      currency: USDC_NAMED_USDC_V2,
     },
 
     # --- Polygon ---
@@ -33,14 +34,14 @@ module X402
       caip2: "eip155:137",
       usdc_address: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
       explorer_url: "https://polygonscan.com",
-      currency: USDC_V2,
+      currency: USDC_NAMED_USD_COIN_V2,
     },
     "polygon-amoy" => {
       chain_id: 80002,
       caip2: "eip155:80002",
       usdc_address: "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582",
       explorer_url: "https://amoy.polygonscan.com",
-      currency: USDC_V2_TESTNET,
+      currency: USDC_NAMED_USDC_V2,
     },
 
     # --- Avalanche ---
@@ -49,14 +50,14 @@ module X402
       caip2: "eip155:43114",
       usdc_address: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
       explorer_url: "https://snowtrace.io",
-      currency: USDC_V2_TESTNET,
+      currency: USDC_NAMED_USDC_V2,
     },
     "avalanche-fuji" => {
       chain_id: 43113,
       caip2: "eip155:43113",
       usdc_address: "0x5425890298aed601595a70AB815c96711a31Bc65",
       explorer_url: "https://testnet.snowtrace.io",
-      currency: USDC_V2,
+      currency: USDC_NAMED_USD_COIN_V2,
     },
 
     # --- Sei ---
@@ -65,13 +66,13 @@ module X402
       caip2: "eip155:1329",
       usdc_address: "0xe15fC38F6D8c56aF07bbCBe3BAf5708A2Bf42392",
       explorer_url: "https://seitrace.com",
-      currency: USDC_DEFAULT,
+      currency: USDC_NAMED_USDC,
     },
     "sei-testnet" => {
       chain_id: 713715,
       caip2: "eip155:713715",
       explorer_url: "https://seitrace.com/?chain=arctic-1",
-      currency: USDC_DEFAULT,
+      currency: USDC_NAMED_USDC,
     },
 
     # --- X Layer ---
@@ -79,13 +80,13 @@ module X402
       chain_id: 196,
       caip2: "eip155:196",
       explorer_url: "https://www.oklink.com/xlayer",
-      currency: USDC_DEFAULT,
+      currency: USDC_NAMED_USDC,
     },
     "xlayer-testnet" => {
       chain_id: 1952,
       caip2: "eip155:1952",
       explorer_url: "https://www.oklink.com/xlayer-test",
-      currency: USDC_DEFAULT,
+      currency: USDC_NAMED_USDC,
     },
 
     # --- SKALE ---
@@ -93,13 +94,13 @@ module X402
       chain_id: 1_187_947_933,
       caip2: "eip155:1187947933",
       explorer_url: "https://skale-base-explorer.skalenodes.com",
-      currency: USDC_DEFAULT,
+      currency: USDC_NAMED_USDC,
     },
     "skale-base-sepolia" => {
       chain_id: 324_705_682,
       caip2: "eip155:324705682",
       explorer_url: "https://base-sepolia-testnet-explorer.skalenodes.com",
-      currency: USDC_DEFAULT,
+      currency: USDC_NAMED_USDC,
     },
 
     # --- KiteAI ---
@@ -107,13 +108,13 @@ module X402
       chain_id: 2366,
       caip2: "eip155:2366",
       explorer_url: "https://kitescan.ai",
-      currency: USDC_DEFAULT,
+      currency: USDC_NAMED_USDC,
     },
     "kiteai-testnet" => {
       chain_id: 2368,
       caip2: "eip155:2368",
       explorer_url: "https://testnet.kitescan.ai",
-      currency: USDC_DEFAULT,
+      currency: USDC_NAMED_USDC,
     },
 
     # --- IoTeX (mainnet only) ---
@@ -121,7 +122,7 @@ module X402
       chain_id: 4689,
       caip2: "eip155:4689",
       explorer_url: "https://iotexscan.io",
-      currency: USDC_DEFAULT,
+      currency: USDC_NAMED_USDC,
     },
 
     # --- Peaq (mainnet only) ---
@@ -129,7 +130,7 @@ module X402
       chain_id: 3338,
       caip2: "eip155:3338",
       explorer_url: "https://peaq.subscan.io",
-      currency: USDC_DEFAULT,
+      currency: USDC_NAMED_USDC,
     },
 
     # --- Solana ---
@@ -139,7 +140,7 @@ module X402
       usdc_address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       explorer_url: "https://explorer.solana.com",
       fee_payer: "CKPKJWNdJEqa81x7CkZ14BVPiY6y16Sxs7owznqtWYp5",
-      currency: USDC_SOL_MAINNET,
+      currency: USDC_NAMED_USD_COIN,
     },
     "solana-devnet" => {
       chain_id: 103,
@@ -147,7 +148,7 @@ module X402
       usdc_address: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
       explorer_url: "https://explorer.solana.com/?cluster=devnet",
       fee_payer: "CKPKJWNdJEqa81x7CkZ14BVPiY6y16Sxs7owznqtWYp5",
-      currency: USDC_DEFAULT,
+      currency: USDC_NAMED_USDC,
     },
   }.freeze
 
