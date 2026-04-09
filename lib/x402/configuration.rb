@@ -13,7 +13,7 @@ module X402
       @currency = ENV.fetch("X402_CURRENCY", "USDC")
       @optimistic = ENV.fetch("X402_OPTIMISTIC", "false") == "true"
       @version = ENV.fetch("X402_VERSION", "2").to_i
-      @fee_payer = ENV.fetch("X402_FEE_PAYER", nil)
+      @fee_payer = nil
       @custom_chains = {}
       @custom_tokens = {}
       @accepted_payments = []
