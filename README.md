@@ -360,7 +360,25 @@ X402_FACILITATOR_URL=https://x402.org/facilitator
 X402_CHAIN=base-sepolia
 X402_CURRENCY=USDC
 X402_OPTIMISTIC=true  # "true" or "false"
+
+# Solana fee payer overrides (required when using a non-default facilitator)
+# The default fee payer is for the Coinbase facilitator (x402.org).
+# Each facilitator manages its own fee payer — check your facilitator's /supported endpoint.
+X402_FEE_PAYER=                     # Global override for all Solana chains
+X402_SOLANA_FEE_PAYER=              # Solana mainnet override
+X402_SOLANA_DEVNET_FEE_PAYER=       # Solana devnet override
+
+# Example: PayAI facilitator (https://facilitator.payai.network)
+# X402_FACILITATOR_URL=https://facilitator.payai.network
+# X402_SOLANA_FEE_PAYER=2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4
+# X402_SOLANA_DEVNET_FEE_PAYER=2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4
 ```
+
+Fee payer lookup priority:
+1. `config.fee_payer` (programmatic, global)
+2. Per-chain ENV variable (e.g., `X402_SOLANA_DEVNET_FEE_PAYER`)
+3. `X402_FEE_PAYER` (ENV, global)
+4. Built-in default from chain config
 
 ## Examples
 
