@@ -133,9 +133,6 @@ module X402
     },
 
     # --- Solana ---
-    # Default fee_payer is for the Coinbase facilitator (x402.org).
-    # If using PayAI facilitator, set X402_SOLANA_FEE_PAYER or X402_SOLANA_DEVNET_FEE_PAYER
-    # to PayAI's fee payer: 2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4
     "solana" => {
       chain_id: 101,
       caip2: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
