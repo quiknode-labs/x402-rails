@@ -253,9 +253,21 @@ Allow clients to pay on any of several supported chains by using `config.accept(
 X402.configure do |config|
   config.wallet_address = ENV['X402_WALLET_ADDRESS']
 
-  # Accept payments on multiple built-in chains
+  # Register a custom chain not included in the built-in list
+  config.register_chain(name: "arbitrum", chain_id: 42161, standard: "eip155")
+  config.register_token(
+    chain: "arbitrum",
+    symbol: "USDC",
+    address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+    decimals: 6,
+    name: "USD Coin",
+    version: "2"
+  )
+
+  # Accept payments on multiple chains (built-in + custom)
   config.accept(chain: "base-sepolia", currency: "USDC")
   config.accept(chain: "polygon-amoy", currency: "USDC")
+  config.accept(chain: "arbitrum", currency: "USDC")
 end
 ```
 
