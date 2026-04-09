@@ -73,7 +73,7 @@ module X402
     # --- KiteAI ---
     "kiteai" => {
       chain_id: 2366,
-      explorer_url: "https://testnet.kitescan.ai",
+      explorer_url: "https://kitescan.ai",
     },
     "kiteai-testnet" => {
       chain_id: 2368,
