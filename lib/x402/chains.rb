@@ -110,26 +110,32 @@ module X402
     },
   }.freeze
 
-  # Currency configurations by chain
+  # Currency configurations by chain.
+  # The `name` field must match the on-chain ERC-20 name() for EIP-712 signature domain.
+  USDC_V2 = { symbol: "USDC", decimals: 6, name: "USD Coin", version: "2" }.freeze
+  USDC_V2_TESTNET = { symbol: "USDC", decimals: 6, name: "USDC", version: "2" }.freeze
+  USDC_DEFAULT = { symbol: "USDC", decimals: 6, name: "USDC", version: nil }.freeze
+  USDC_SOL_MAINNET = { symbol: "USDC", decimals: 6, name: "USD Coin", version: nil }.freeze
+
   CURRENCY_BY_CHAIN = {
-    "base" => { symbol: "USDC", decimals: 6, name: "USD Coin", version: "2" },
-    "base-sepolia" => { symbol: "USDC", decimals: 6, name: "USDC", version: "2" },
-    "polygon" => { symbol: "USDC", decimals: 6, name: "USD Coin", version: "2" },
-    "polygon-amoy" => { symbol: "USDC", decimals: 6, name: "USDC", version: "2" },
-    "avalanche" => { symbol: "USDC", decimals: 6, name: "USDC", version: "2" },
-    "avalanche-fuji" => { symbol: "USDC", decimals: 6, name: "USD Coin", version: "2" },
-    "sei" => { symbol: "USDC", decimals: 6, name: "USDC", version: nil },
-    "sei-testnet" => { symbol: "USDC", decimals: 6, name: "USDC", version: nil },
-    "xlayer" => { symbol: "USDC", decimals: 6, name: "USDC", version: nil },
-    "xlayer-testnet" => { symbol: "USDC", decimals: 6, name: "USDC", version: nil },
-    "skale-base" => { symbol: "USDC", decimals: 6, name: "USDC", version: nil },
-    "skale-base-sepolia" => { symbol: "USDC", decimals: 6, name: "USDC", version: nil },
-    "kiteai" => { symbol: "USDC", decimals: 6, name: "USDC", version: nil },
-    "kiteai-testnet" => { symbol: "USDC", decimals: 6, name: "USDC", version: nil },
-    "iotex" => { symbol: "USDC", decimals: 6, name: "USDC", version: nil },
-    "peaq" => { symbol: "USDC", decimals: 6, name: "USDC", version: nil },
-    "solana" => { symbol: "USDC", decimals: 6, name: "USD Coin", version: nil },
-    "solana-devnet" => { symbol: "USDC", decimals: 6, name: "USDC", version: nil },
+    "base" => USDC_V2,
+    "base-sepolia" => USDC_V2_TESTNET,
+    "polygon" => USDC_V2,
+    "polygon-amoy" => USDC_V2_TESTNET,
+    "avalanche" => USDC_V2_TESTNET,
+    "avalanche-fuji" => USDC_V2,
+    "sei" => USDC_DEFAULT,
+    "sei-testnet" => USDC_DEFAULT,
+    "xlayer" => USDC_DEFAULT,
+    "xlayer-testnet" => USDC_DEFAULT,
+    "skale-base" => USDC_DEFAULT,
+    "skale-base-sepolia" => USDC_DEFAULT,
+    "kiteai" => USDC_DEFAULT,
+    "kiteai-testnet" => USDC_DEFAULT,
+    "iotex" => USDC_DEFAULT,
+    "peaq" => USDC_DEFAULT,
+    "solana" => USDC_SOL_MAINNET,
+    "solana-devnet" => USDC_DEFAULT,
   }.freeze
 
   CAIP2_MAPPING = {
