@@ -8,7 +8,7 @@
 
 Accept instant blockchain micropayments in your Rails applications using the [x402 payment protocol](https://www.x402.org/).
 
-Supports Base, avalanche, and other blockchain networks.
+Supports 18 networks including Base, Polygon, Avalanche, Sei, Solana, and more.
 
 ## Features
 
@@ -18,7 +18,7 @@ Supports Base, avalanche, and other blockchain networks.
 - **$0.001 minimum** payment amounts
 - **Optimistic & non-optimistic** settlement modes
 - **Automatic settlement** after successful responses
-- **Browser paywall** and API support
+- **API paywall** with 402 payment-required responses
 - **Rails 7.0+** compatible
 
 ## Example Video
@@ -145,7 +145,10 @@ X402.configure do |config|
   config.facilitator = ENV.fetch("X402_FACILITATOR_URL", "https://x402.org/facilitator")
 
   # Blockchain network (default: "base-sepolia")
-  # Options: "base-sepolia", "base", "avalanche-fuji", "avalanche"
+  # Built-in: base, base-sepolia, polygon, polygon-amoy, avalanche, avalanche-fuji,
+  #           sei, sei-testnet, iotex, peaq, xlayer, xlayer-testnet,
+  #           skale-base, skale-base-sepolia, kiteai, kiteai-testnet,
+  #           solana, solana-devnet
   config.chain = ENV.fetch("X402_CHAIN", "base-sepolia")
 
   # Payment token (default: "USDC")
@@ -165,7 +168,7 @@ end
 | ---------------- | -------- | -------------------------------- | --------------------------------------------------------------------------------- |
 | `wallet_address` | **Yes**  | -                                | Your Ethereum wallet address where payments will be received                      |
 | `facilitator`    | No       | `"https://x402.org/facilitator"` | Facilitator service URL for payment verification and settlement                   |
-| `chain`          | No       | `"base-sepolia"`                 | Blockchain network to use (`base-sepolia`, `base`, `avalanche-fuji`, `avalanche`) |
+| `chain`          | No       | `"base-sepolia"`                 | Blockchain network (see built-in list above) |
 | `currency`       | No       | `"USDC"`                         | Payment token symbol (currently only USDC supported)                              |
 | `optimistic`     | No       | `true`                           | Settlement mode (see Optimistic vs Non-Optimistic Mode below)                     |
 | `version`        | No       | `2`                              | Protocol version (1 or 2). See Protocol Versions section                          |
@@ -176,30 +179,30 @@ You can register custom EVM chains and tokens beyond the built-in options.
 
 #### Register a Custom Chain
 
-Add support for any EVM-compatible chain:
+Add support for any EVM-compatible chain beyond the 18 built-in networks:
 
 ```ruby
 X402.configure do |config|
   config.wallet_address = ENV['X402_WALLET_ADDRESS']
 
-  # Register Polygon mainnet
+  # Register Arbitrum (not built-in)
   config.register_chain(
-    name: "polygon",
-    chain_id: 137,
+    name: "arbitrum",
+    chain_id: 42161,
     standard: "eip155"
   )
 
   # Register the token for that chain
   config.register_token(
-    chain: "polygon",
+    chain: "arbitrum",
     symbol: "USDC",
-    address: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+    address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
     decimals: 6,
     name: "USD Coin",
     version: "2"
   )
 
-  config.chain = "polygon"
+  config.chain = "arbitrum"
   config.currency = "USDC"
 end
 ```
@@ -250,20 +253,21 @@ Allow clients to pay on any of several supported chains by using `config.accept(
 X402.configure do |config|
   config.wallet_address = ENV['X402_WALLET_ADDRESS']
 
-  # Register a custom chain
-  config.register_chain(name: "polygon-amoy", chain_id: 80002, standard: "eip155")
+  # Register a custom chain not included in the built-in list
+  config.register_chain(name: "arbitrum", chain_id: 42161, standard: "eip155")
   config.register_token(
-    chain: "polygon-amoy",
+    chain: "arbitrum",
     symbol: "USDC",
-    address: "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582",
+    address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
     decimals: 6,
     name: "USD Coin",
     version: "2"
   )
 
-  # Accept payments on multiple chains
+  # Accept payments on multiple chains (built-in + custom)
   config.accept(chain: "base-sepolia", currency: "USDC")
   config.accept(chain: "polygon-amoy", currency: "USDC")
+  config.accept(chain: "arbitrum", currency: "USDC")
 end
 ```
 
@@ -356,7 +360,25 @@ X402_FACILITATOR_URL=https://x402.org/facilitator
 X402_CHAIN=base-sepolia
 X402_CURRENCY=USDC
 X402_OPTIMISTIC=true  # "true" or "false"
+
+# Solana fee payer overrides (required when using a non-default facilitator)
+# The default fee payer is for the Coinbase facilitator (x402.org).
+# Each facilitator manages its own fee payer — check your facilitator's /supported endpoint.
+X402_FEE_PAYER=                     # Global override for all Solana chains
+X402_SOLANA_FEE_PAYER=              # Solana mainnet override
+X402_SOLANA_DEVNET_FEE_PAYER=       # Solana devnet override
+
+# Example: PayAI facilitator (https://facilitator.payai.network)
+# X402_FACILITATOR_URL=https://facilitator.payai.network
+# X402_SOLANA_FEE_PAYER=2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4
+# X402_SOLANA_DEVNET_FEE_PAYER=2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4
 ```
+
+Fee payer lookup priority:
+1. `config.fee_payer` (programmatic, global)
+2. Per-chain ENV variable (e.g., `X402_SOLANA_DEVNET_FEE_PAYER`)
+3. `X402_FEE_PAYER` (ENV, global)
+4. Built-in default from chain config
 
 ## Examples
 

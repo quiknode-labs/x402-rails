@@ -120,8 +120,12 @@ RSpec.describe X402, "chains" do
       expect(base_address).not_to eq(avalanche_address)
     end
 
+    it "returns USDC address for polygon" do
+      expect(X402.usdc_address_for("polygon")).to eq("0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359")
+    end
+
     it "returns nil for unsupported chain" do
-      expect(X402.usdc_address_for("polygon")).to be_nil
+      expect(X402.usdc_address_for("ethereum")).to be_nil
     end
   end
 
