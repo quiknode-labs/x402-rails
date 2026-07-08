@@ -187,6 +187,14 @@ RSpec.describe X402, "chains" do
       expect(X402.from_caip2("eip155:80002")).to eq("polygon-amoy")
     end
 
+    it "resolves custom chains whose chain id has no built-in mapping" do
+      X402.configure do |config|
+        config.register_chain(name: "monad-testnet", chain_id: 10143)
+      end
+
+      expect(X402.from_caip2("eip155:10143")).to eq("monad-testnet")
+    end
+
     it "raises error for unknown CAIP-2 string" do
       expect { X402.from_caip2("eip155:999999") }.to raise_error(X402::ConfigurationError, /Unknown CAIP-2 network/)
     end

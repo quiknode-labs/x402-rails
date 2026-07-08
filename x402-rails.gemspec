@@ -38,6 +38,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "faraday-follow_redirects", "~> 0.3"
 
   # Development dependencies
+  spec.add_development_dependency "jwt", "~> 3.0"
   spec.add_development_dependency "rake", "~> 13.0"
   spec.add_development_dependency "rspec", "~> 3.0"
   spec.add_development_dependency "rspec-rails", "~> 6.0"

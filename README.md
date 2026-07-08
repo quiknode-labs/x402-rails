@@ -19,6 +19,8 @@ Supports 18 networks including Base, Polygon, Avalanche, Sei, Solana, and more.
 - **Optimistic & non-optimistic** settlement modes
 - **Automatic settlement** after successful responses
 - **API paywall** with 402 payment-required responses
+- **Bazaar discovery** to list your routes in facilitator catalogs (PayAI, Coinbase CDP)
+- **Coinbase CDP facilitator** support with built-in auth
 - **Rails 7.0+** compatible
 
 ## Example Video
@@ -43,12 +45,18 @@ bundle install
 
 ### 1. Configure the gem
 
-Create `config/initializers/x402.rb`:
+Generate the initializer:
+
+```bash
+bin/rails generate x402:install
+```
+
+Then edit `config/initializers/x402.rb`:
 
 ```ruby
 X402.configure do |config|
   config.wallet_address = ENV['X402_WALLET_ADDRESS']  # Your recipient wallet
-  config.facilitator = "https://x402.org/facilitator"
+  config.facilitator = "https://www.x402.org/facilitator"
   config.chain = "base-sepolia"  # or "base" for base mainnet
   config.currency = "USDC"
   config.optimistic = false  # Forces to check for settlement before giving response.
@@ -74,6 +82,21 @@ end
 ```
 
 That's it! Your endpoint now requires payment.
+
+### 3. (Optional) Make it discoverable
+
+Declare discovery metadata and agents can find your route in facilitator catalogs (see [Bazaar Discovery](#bazaar-discovery)):
+
+```ruby
+class ApiController < ApplicationController
+  x402_discovery only: :weather,
+                 input: { "city" => "San Francisco" },
+                 input_schema: { "properties" => { "city" => { "type" => "string" } } },
+                 output: { example: { "temperature" => 72 } }
+end
+```
+
+Indexing happens when a client pays: the extension rides the 402, the paying client echoes it, and the facilitator catalogs the route on settle.
 
 ## Usage Patterns
 
@@ -141,8 +164,8 @@ X402.configure do |config|
   # Required: Your wallet address where payments will be received
   config.wallet_address = ENV['X402_WALLET_ADDRESS']
 
-  # Facilitator service URL (default: "https://x402.org/facilitator")
-  config.facilitator = ENV.fetch("X402_FACILITATOR_URL", "https://x402.org/facilitator")
+  # Facilitator service URL (default: "https://www.x402.org/facilitator")
+  config.facilitator = ENV.fetch("X402_FACILITATOR_URL", "https://www.x402.org/facilitator")
 
   # Blockchain network (default: "base-sepolia")
   # Built-in: base, base-sepolia, polygon, polygon-amoy, avalanche, avalanche-fuji,
@@ -155,10 +178,10 @@ X402.configure do |config|
   # Currently only USDC is supported
   config.currency = ENV.fetch("X402_CURRENCY","USDC")
 
-  # Optimistic mode (default: true)
+  # Optimistic mode (default: false)
   # true: Fast response, settle payment after response is sent
   # false: Wait for blockchain settlement before sending response
-  config.optimistic = ENV.fetch("X402_OPTIMISTIC",false)
+  config.optimistic = ENV.fetch("X402_OPTIMISTIC", "false") == "true"
 end
 ```
 
@@ -167,11 +190,13 @@ end
 | Attribute        | Required | Default                          | Description                                                                       |
 | ---------------- | -------- | -------------------------------- | --------------------------------------------------------------------------------- |
 | `wallet_address` | **Yes**  | -                                | Your Ethereum wallet address where payments will be received                      |
-| `facilitator`    | No       | `"https://x402.org/facilitator"` | Facilitator service URL for payment verification and settlement                   |
+| `facilitator`    | No       | `"https://www.x402.org/facilitator"` | Facilitator service URL for payment verification and settlement               |
 | `chain`          | No       | `"base-sepolia"`                 | Blockchain network (see built-in list above) |
 | `currency`       | No       | `"USDC"`                         | Payment token symbol (currently only USDC supported)                              |
-| `optimistic`     | No       | `true`                           | Settlement mode (see Optimistic vs Non-Optimistic Mode below)                     |
+| `optimistic`     | No       | `false`                          | `true`: respond before settlement; `false`: settle before responding             |
 | `version`        | No       | `2`                              | Protocol version (1 or 2). See Protocol Versions section                          |
+| `cdp_api_key_id` | No       | `ENV["CDP_API_KEY_ID"]`          | Coinbase CDP API key id — only used when the facilitator is CDP                   |
+| `cdp_api_key_secret` | No   | `ENV["CDP_API_KEY_SECRET"]`      | Coinbase CDP API key secret (ECDSA PEM or Ed25519 base64)                         |
 
 ### Custom Chains and Tokens
 
@@ -347,6 +372,157 @@ def legacy_v1
 end
 ```
 
+## Bazaar Discovery
+
+Facilitators with a discovery layer (PayAI, Coinbase CDP Bazaar) index your route into their public catalog when a payment carries the x402 Bazaar discovery extension. Declare it per action and the gem attaches it to every v2 402 for that action; paying clients echo it into their payment payload, and the gem forwards the echo to the facilitator on verify/settle — that's what creates the catalog entry.
+
+> **Note:** Parameterized routes (e.g. `/weather/:city`) are cataloged per concrete URL — the gem does not emit the optional `routeTemplate` field.
+
+### GET route (query params)
+
+Omit `body_type` for GET/HEAD/DELETE — `input` describes query params:
+
+```ruby
+class WeatherController < ApplicationController
+  x402_discovery only: :show,
+                 input: { "city" => "San Francisco", "units" => "celsius" },
+                 input_schema: {
+                   "type" => "object",
+                   "properties" => {
+                     "city" => { "type" => "string", "description" => "City name" },
+                     "units" => { "type" => "string", "enum" => ["celsius", "fahrenheit"] },
+                   },
+                   "required" => ["city"],
+                 },
+                 output: { example: { "weather" => "foggy", "temperature" => 15 } }
+
+  def show
+    x402_paywall(amount: 0.001)
+    return if performed?
+    render json: { weather: "foggy", temperature: 15 }
+  end
+end
+```
+
+### POST route (JSON body)
+
+Pass `body_type: "json"` — `input` is now an example request body. Give every field a `description`: it's what agents read in the catalog to call you correctly.
+
+```ruby
+class SearchController < ApplicationController
+  x402_discovery only: :create,
+                 body_type: "json",
+                 input: {
+                   "query" => "solar panels",
+                   "filters" => { "max_price" => 100 },
+                 },
+                 input_schema: {
+                   "type" => "object",
+                   "properties" => {
+                     "query" => { "type" => "string", "description" => "Search terms" },
+                     "filters" => {
+                       "type" => "object",
+                       "properties" => { "max_price" => { "type" => "number" } },
+                     },
+                   },
+                   "required" => ["query"],
+                 },
+                 output: {
+                   example: { "results" => [{ "title" => "…", "price" => 42 }] },
+                   schema: { "properties" => { "results" => { "type" => "array" } } },
+                 }
+
+  def create
+    x402_paywall(amount: 0.005)
+    return if performed?
+    render json: { results: search_results }
+  end
+end
+```
+
+### Multiple routes in one controller
+
+Each action gets its own declaration; undeclared actions emit no extension:
+
+```ruby
+class ReportsController < ApplicationController
+  x402_discovery only: :create, body_type: "json",
+                 input: { "ticker" => "AAPL" },
+                 input_schema: { "properties" => { "ticker" => { "type" => "string" } }, "required" => ["ticker"] },
+                 output: { example: { "report_id" => "rep_123" } }
+
+  x402_discovery only: :summary,
+                 input: { "report_id" => "rep_123" },
+                 input_schema: { "properties" => { "report_id" => { "type" => "string" } }, "required" => ["report_id"] },
+                 output: { example: { "summary" => "…" } }
+end
+```
+
+### Full control
+
+Build the extension yourself (e.g. to share schemas with your validators), or attach per-call:
+
+```ruby
+x402_discovery only: :create, extensions: X402::DiscoveryExtension.declare(
+  body_type: "json",
+  input: MyApi::EXAMPLE_BODY,
+  input_schema: MyApi::BODY_SCHEMA,
+  output: { example: MyApi::EXAMPLE_RESPONSE },
+)
+
+# or, inside an action:
+x402_paywall(amount: 0.005, extensions: my_extensions)
+```
+
+### Indexing rules
+
+- The example `input` **must validate against `input_schema`** — facilitators silently skip routes whose extension fails validation. Keep example and schema in sync.
+- `method` is stamped from the actual request at render time — omit it; a declared value is overwritten.
+- `description:` on `x402_discovery` sets the 402's `resource.description` — the text catalogs display for the route. A description alone just names the route; declaring input/output metadata is what makes it discoverable.
+- Catalogs are **per-facilitator** — an entry appears only in the catalog of the facilitator that settled the payment. To appear in both PayAI and CDP, settle at least one payment through each.
+- Indexing is a side-effect of a real payment; there is no registration API.
+
+Verify a listing:
+
+```ruby
+X402::FacilitatorClient.new.discovery_resources(type: "http")
+# or against a specific facilitator:
+X402::FacilitatorClient.new("https://facilitator.payai.network").discovery_resources
+```
+
+## Facilitators
+
+Any x402 facilitator works via `X402_FACILITATOR_URL` / `config.facilitator`. Auth is applied automatically:
+
+| Facilitator | URL | Auth |
+| ----------- | --- | ---- |
+| x402.org (default) | `https://www.x402.org/facilitator` | none |
+| PayAI | `https://facilitator.payai.network` | none |
+| Coinbase CDP | `https://api.cdp.coinbase.com/platform/v2/x402` | Bearer JWT, built in |
+
+### Using Coinbase CDP
+
+1. Create a project + API key at [cdp.coinbase.com](https://cdp.coinbase.com) (ECDSA and Ed25519 keys both work).
+2. Set the env vars CDP's own SDKs use — the gem picks them up automatically:
+
+```bash
+X402_FACILITATOR_URL=https://api.cdp.coinbase.com/platform/v2/x402
+CDP_API_KEY_ID=your-key-id
+CDP_API_KEY_SECRET=your-key-secret
+```
+
+Or configure explicitly:
+
+```ruby
+X402.configure do |config|
+  config.facilitator = "https://api.cdp.coinbase.com/platform/v2/x402"
+  config.cdp_api_key_id = Rails.application.credentials.dig(:cdp, :api_key_id)
+  config.cdp_api_key_secret = Rails.application.credentials.dig(:cdp, :api_key_secret)
+end
+```
+
+Every verify/settle/supported/discovery request then carries a per-request, URI-bound Bearer JWT (2-minute expiry), matching `@coinbase/cdp-sdk`. Note: CDP's Bazaar discovery currently covers Base and Base Sepolia USDC.
+
 ## Environment Variables
 
 Configure via environment variables:
@@ -356,10 +532,14 @@ Configure via environment variables:
 X402_WALLET_ADDRESS=0xYourAddress
 
 # Optional (with defaults)
-X402_FACILITATOR_URL=https://x402.org/facilitator
+X402_FACILITATOR_URL=https://www.x402.org/facilitator
 X402_CHAIN=base-sepolia
 X402_CURRENCY=USDC
 X402_OPTIMISTIC=true  # "true" or "false"
+
+# Coinbase CDP facilitator auth (only needed when X402_FACILITATOR_URL is CDP)
+CDP_API_KEY_ID=
+CDP_API_KEY_SECRET=
 
 # Solana fee payer overrides (required when using a non-default facilitator)
 # The default fee payer is for the Coinbase facilitator (x402.org).
