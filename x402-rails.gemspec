@@ -5,7 +5,7 @@ require_relative "lib/x402/rails/version"
 Gem::Specification.new do |spec|
   spec.name = "x402-rails"
   spec.version = X402::Rails::VERSION
-  spec.authors = ["QuickNode"]
+  spec.authors = ["Quicknode"]
   spec.email = ["zach+x402@quiknode.io"]
 
   spec.summary = "Rails integration for x402 payment protocol (supporting x402 v2)."
