@@ -474,6 +474,18 @@ x402_discovery only: :create, extensions: X402::DiscoveryExtension.declare(
 x402_paywall(amount: 0.005, extensions: my_extensions)
 ```
 
+### Custom 402 bodies
+
+Rendering your own 402 body (plan catalogs, upsell info)? `x402_payment_required!` builds the document — declared description and extension included — stamps the `PAYMENT-REQUIRED` header, and returns it without rendering:
+
+```ruby
+def create
+  doc = x402_payment_required!(amount: 0)
+  render json: { error: "Payment required", plans: plans, accepts: doc[:accepts] },
+         status: :payment_required
+end
+```
+
 ### Indexing rules
 
 - The example `input` **must validate against `input_schema`** — facilitators silently skip routes whose extension fails validation. Keep example and schema in sync.

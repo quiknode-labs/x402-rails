@@ -90,6 +90,29 @@ module X402
         x402_payment_header(version: version).present?
       end
 
+      # Builds the 402 PaymentRequired document — declared description and
+      # discovery extension included — stamps it into the version's
+      # requirement header with Cache-Control: no-store, and returns it.
+      # For controllers that render a custom 402 body around the standard
+      # header (the gem's own 402s render the document as the body).
+      def x402_payment_required!(amount:, chain: nil, currency: nil, version: nil,
+                                 wallet_address: nil, fee_payer: nil, accepts: nil)
+        protocol_version = version || X402.configuration.version
+        version_strategy = X402::Versions.for(protocol_version)
+
+        requirement_response = generate_payment_required_response(
+          amount,
+          chain: chain,
+          currency: currency,
+          version: protocol_version,
+          wallet_address: wallet_address,
+          fee_payer: fee_payer,
+          accepts: accepts
+        )
+        stamp_402_headers!(requirement_response, version_strategy)
+        requirement_response
+      end
+
       private
 
       def generate_payment_required_response(amount, error_message = nil,
@@ -131,6 +154,11 @@ module X402
       end
 
       def render_402_response(requirement_response, version_strategy)
+        stamp_402_headers!(requirement_response, version_strategy)
+        render json: requirement_response, status: :payment_required
+      end
+
+      def stamp_402_headers!(requirement_response, version_strategy)
         # The version strategy's output declares whether this protocol version
         # carries extensions (v2 emits the key, v1 does not).
         discovery = x402_resolved_discovery_extensions
@@ -144,7 +172,6 @@ module X402
         end
         # payment challenges are per-request and must not be cached
         response.headers["Cache-Control"] = "no-store"
-        render json: requirement_response, status: :payment_required
       end
 
       # Explicit x402_paywall(extensions:) wins over the class-level

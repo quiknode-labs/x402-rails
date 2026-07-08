@@ -2,7 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0] - Unreleased
+## [1.3.0] - Unreleased
+
+### Added
+- **`x402_payment_required!`** - Builds the 402 PaymentRequired document (declared description and discovery extension included), stamps the requirement header and `Cache-Control: no-store`, and returns the document — for controllers that render a custom 402 body around the standard header
+
+## [1.2.0] - 2026-07-08
 
 ### Added
 - **Bazaar discovery** - `x402_discovery` controller macro declares discovery metadata per action; the extension is attached to every v2 402 the gem renders, echoed by paying clients, and indexed by facilitator catalogs (PayAI, Coinbase CDP Bazaar)

@@ -110,6 +110,29 @@ RSpec.describe X402::Rails::ControllerExtensions do
     end
   end
 
+  describe "#x402_payment_required!" do
+    it "stamps the full header (description + extension) and returns the document without rendering" do
+      harness_class.x402_discovery(
+        only: :create,
+        description: "Catalog text",
+        body_type: "json",
+        input: { "amount" => 1 },
+      )
+      controller = harness_class.new
+
+      document = controller.x402_payment_required!(amount: 0.001)
+
+      expect(controller.rendered_json).to be_nil
+      expect(controller.response.headers["Cache-Control"]).to eq("no-store")
+
+      decoded = decoded_header(controller)
+      expect(decoded.dig("resource", "description")).to eq("Catalog text")
+      expect(decoded.dig("extensions", "bazaar", "info", "input", "method")).to eq("POST")
+      expect(document[:accepts]).to be_present
+      expect(document[:extensions]).to be_present
+    end
+  end
+
   describe "x402_discovery(description:)" do
     it "sets the 402 resource description for the declared action" do
       harness_class.x402_discovery(only: :create, description: "Weather data, paid per call")
