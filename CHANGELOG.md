@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0] - Unreleased
+## [1.2.0] - 2026-07-08
 
 ### Added
 - **Bazaar discovery** - `x402_discovery` controller macro declares discovery metadata per action; the extension is attached to every v2 402 the gem renders, echoed by paying clients, and indexed by facilitator catalogs (PayAI, Coinbase CDP Bazaar)
