@@ -170,6 +170,18 @@ RSpec.describe X402::Rails::ControllerExtensions, "payment processing" do
       expect(controller.rendered_json[:error]).to eq("failed to settle payment: insufficient_funds")
     end
 
+    it "keeps the facilitator's reason when settle returns HTTP 400" do
+      stub_verify
+      stub_request(:post, "#{facilitator_url}/settle")
+        .to_return(status: 400, body: { error: "insufficient_funds" }.to_json)
+      controller = paywalled_controller(v2_payment_header)
+
+      controller.x402_paywall(amount: 0.001)
+
+      expect(controller.rendered_status).to eq(:payment_required)
+      expect(controller.rendered_json[:error]).to include("insufficient_funds")
+    end
+
     it "renders 402 when the facilitator errors during settlement" do
       stub_verify
       stub_request(:post, "#{facilitator_url}/settle").to_return(status: 500, body: "")
@@ -178,7 +190,7 @@ RSpec.describe X402::Rails::ControllerExtensions, "payment processing" do
       controller.x402_paywall(amount: 0.001)
 
       expect(controller.rendered_status).to eq(:payment_required)
-      expect(controller.rendered_json[:error]).to eq("failed to settle payment: Settlement failed")
+      expect(controller.rendered_json[:error]).to eq("failed to settle payment: Facilitator error (settle): 500")
     end
   end
 

@@ -344,7 +344,7 @@ module X402
           settlement_result
         rescue X402::FacilitatorError, X402::InvalidPaymentError => e
           X402.logger.error("x402 settlement error: #{e.message}")
-          nil
+          X402::SettlementResponse.new("success" => false, "errorReason" => e.message)
         end
       end
 
