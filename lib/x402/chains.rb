@@ -133,6 +133,22 @@ module X402
       currency: USDC_NAMED_USDC,
     },
 
+    # --- XDC ---
+    "xdc" => {
+      chain_id: 50,
+      caip2: "eip155:50",
+      usdc_address: "0xfA2958CB79b0491CC627c1557F441eF849Ca8eb1",
+      explorer_url: "https://xdcscan.com",
+      currency: USDC_NAMED_USDC_V2,
+    },
+    "xdc-testnet" => {
+      chain_id: 51,
+      caip2: "eip155:51",
+      usdc_address: "0xb5AB69F7bBada22B28e79C8FFAECe55eF1c771D4",
+      explorer_url: "https://testnet.xdcscan.com",
+      currency: USDC_NAMED_USDC_V2,
+    },
+
     # --- Solana ---
     "solana" => {
       chain_id: 101,
