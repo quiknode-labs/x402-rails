@@ -85,7 +85,7 @@ RSpec.describe X402::Versions::V2 do
       expect(result).not_to have_key(:maxAmountRequired)
     end
 
-    it "does not include resource in requirement" do
+    it "does not include resource in requirement (v2 places it top-level)" do
       result = strategy.format_requirement(requirement)
       expect(result).not_to have_key(:resource)
     end

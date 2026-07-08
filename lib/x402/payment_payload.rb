@@ -2,7 +2,7 @@
 
 module X402
   class PaymentPayload
-    attr_accessor :x402_version, :scheme, :network, :payload, :accepted, :resource_info
+    attr_accessor :x402_version, :scheme, :network, :payload, :accepted, :resource_info, :extensions
 
     def initialize(attributes = {})
       attrs = attributes.with_indifferent_access
@@ -10,6 +10,7 @@ module X402
       @x402_version = (attrs[:x402Version] || attrs[:x402_version] || 1).to_i
       @accepted = attrs[:accepted]
       @resource_info = attrs[:resource]
+      @extensions = attrs[:extensions]
 
       if @accepted
         @scheme = @accepted.with_indifferent_access[:scheme]
@@ -95,7 +96,8 @@ module X402
           x402Version: x402_version,
           accepted: format_accepted_for_version(version_strategy),
           payload: payload,
-          extensions: {}
+          # Client-echoed extensions (e.g. bazaar discovery) must survive to verify/settle
+          extensions: extensions.presence || {}
         }
         base[:resource] = resource_info if resource_info
         base

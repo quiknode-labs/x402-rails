@@ -19,7 +19,16 @@ X402.configure do |config|
 
   # Currency symbol (currently only USDC is supported)
   config.currency = ENV.fetch("X402_CURRENCY", "USDC")
+
+  # Coinbase CDP facilitator (https://api.cdp.coinbase.com/platform/v2/x402)
+  # requires API credentials. These are read automatically from CDP_API_KEY_ID /
+  # CDP_API_KEY_SECRET, or set them explicitly:
+  # config.cdp_api_key_id = ENV.fetch("CDP_API_KEY_ID", nil)
+  # config.cdp_api_key_secret = ENV.fetch("CDP_API_KEY_SECRET", nil)
 end
+
+# To list paywalled routes in facilitator Bazaar catalogs, declare discovery
+# metadata in the controller with `x402_discovery` — see the README.
 
 # Validate configuration on initialization
 X402.configuration.validate!

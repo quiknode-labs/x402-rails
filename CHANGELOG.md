@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - Unreleased
+
+### Added
+- **Bazaar discovery** - `x402_discovery` controller macro declares discovery metadata per action; the extension is attached to every v2 402 the gem renders, echoed by paying clients, and indexed by facilitator catalogs (PayAI, Coinbase CDP Bazaar)
+- **`X402::DiscoveryExtension.declare`** - Builds the `extensions.bazaar` wire shape, matching `@x402/extensions` `declareDiscoveryExtension` (query and body forms)
+- **Coinbase CDP facilitator auth** - Requests to `api.cdp.coinbase.com` carry the required Bearer JWT (ES256 and Ed25519 keys, no new dependencies). Credentials via `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET` or `config.cdp_api_key_id` / `config.cdp_api_key_secret`
+- **`FacilitatorClient#discovery_resources`** - Query a facilitator's discovery catalog
+- **`x402_payment_header` / `x402_payment_attempted?`** - Controller helpers for the version-appropriate payment header, for conditional paywall flows and idempotency fingerprints
+- `x402_paywall(extensions:)` for attaching a prebuilt extensions hash directly, and `x402_paywall(description:)` for the 402 `resource.description` facilitator catalogs display
+
+### Changed
+- 402 responses set `Cache-Control: no-store`
+- Facilitator request/response bodies and settlement diagnostics log at `debug`; settlement outcomes stay at `info`/`error`
+
+### Fixed
+- **v2 PaymentPayload dropped client-echoed `extensions`** - `to_h` hardcoded `extensions: {}`, so the discovery extension never reached the facilitator on verify/settle and routes could not be indexed. Client extensions are now forwarded untouched
+- Settlement failures returning HTTP 400 from the facilitator no longer raise out of the settlement hook; they are logged and handled like other settlement errors
+- `rails generate x402:install` - the install generator was not discoverable (it lived outside Rails' generator load path)
+
+With no discovery declared and a non-CDP facilitator, the only wire change from 1.1.0 is the 402 `Cache-Control` header.
+
 ## [1.0.0] - 2026-01-07
 
 ### Added

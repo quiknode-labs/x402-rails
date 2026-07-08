@@ -4,7 +4,7 @@ module X402
   class Configuration
     attr_accessor :wallet_address, :facilitator, :chain, :currency, :optimistic,
                   :version, :fee_payer, :custom_chains, :custom_tokens,
-                  :accepted_payments
+                  :accepted_payments, :cdp_api_key_id, :cdp_api_key_secret
 
     def initialize
       @wallet_address = ENV.fetch("X402_WALLET_ADDRESS", nil)
@@ -17,6 +17,10 @@ module X402
       @custom_chains = {}
       @custom_tokens = {}
       @accepted_payments = []
+      # Coinbase CDP facilitator credentials (same env names as CDP's own SDKs).
+      # Only used when the facilitator host is api.cdp.coinbase.com.
+      @cdp_api_key_id = ENV.fetch("CDP_API_KEY_ID", nil)
+      @cdp_api_key_secret = ENV.fetch("CDP_API_KEY_SECRET", nil)
     end
 
     def accept(chain:, currency: "USDC", wallet_address: nil)
@@ -92,6 +96,11 @@ module X402
 
     def reset_configuration!
       @configuration = Configuration.new
+    end
+
+    # ::-qualified: bare Rails here resolves to the gem's own X402::Rails.
+    def logger
+      ::Rails.logger
     end
   end
 

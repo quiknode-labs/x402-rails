@@ -7,6 +7,29 @@ module X402
 
       included do
         after_action :settle_x402_payment_if_needed
+        class_attribute :x402_discovery_declarations, instance_writer: false, default: {}
+      end
+
+      class_methods do
+        # Declares Bazaar discovery metadata for paywalled actions so 402
+        # responses advertise the route to facilitator discovery catalogs.
+        #
+        #   x402_discovery only: :create,
+        #                  body_type: "json",
+        #                  input: { "city" => "SF" },
+        #                  input_schema: { "properties" => { "city" => { "type" => "string" } } },
+        #                  output: { example: { "weather" => "foggy" } }
+        #
+        # Accepts either DiscoveryExtension.declare kwargs (as above) or a
+        # prebuilt hash via `extensions:`. Without `only:`, applies to every
+        # paywalled action in the controller. `method` defaults to the actual
+        # request method at render time.
+        def x402_discovery(only: nil, **config)
+          actions = only.nil? ? [:__all__] : Array(only).map(&:to_sym)
+          self.x402_discovery_declarations = x402_discovery_declarations.merge(
+            actions.to_h { |action| [action, config] }
+          )
+        end
       end
 
       def x402_paywall(options = {})
@@ -17,6 +40,8 @@ module X402
         wallet_address = options[:wallet_address]
         fee_payer = options[:fee_payer]
         accepts = options[:accepts]
+        description = options[:description]
+        @x402_paywall_extensions = options[:extensions]
 
         begin
           version_strategy = X402::Versions.for(protocol_version)
@@ -34,7 +59,8 @@ module X402
             version: protocol_version,
             wallet_address: wallet_address,
             fee_payer: fee_payer,
-            accepts: accepts
+            accepts: accepts,
+            description: description
           )
         end
 
@@ -49,17 +75,31 @@ module X402
         )
       end
 
+      # The raw payment header for the configured protocol version, or nil
+      # when absent (or when the configured version is invalid).
+      def x402_payment_header
+        version_strategy = X402::Versions.for(X402.configuration.version)
+        request.headers[version_strategy.payment_header_name].presence
+      rescue X402::ConfigurationError
+        nil
+      end
+
+      def x402_payment_attempted?
+        x402_payment_header.present?
+      end
+
       private
 
       def generate_payment_required_response(amount, error_message = nil,
                                               chain: nil, currency: nil, version: nil,
-                                              wallet_address: nil, fee_payer: nil, accepts: nil)
+                                              wallet_address: nil, fee_payer: nil, accepts: nil,
+                                              description: nil)
         protocol_version = version || X402.configuration.version
 
         requirement_response = X402::RequirementGenerator.generate(
           amount: amount,
           resource: request.original_url,
-          description: "Payment required for #{request.path}",
+          description: description || "Payment required for #{request.path}",
           chain: chain,
           currency: currency,
           version: protocol_version,
@@ -72,7 +112,8 @@ module X402
       end
 
       def render_payment_required(amount, chain: nil, currency: nil, version: nil,
-                                   wallet_address: nil, fee_payer: nil, accepts: nil)
+                                   wallet_address: nil, fee_payer: nil, accepts: nil,
+                                   description: nil)
         protocol_version = version || X402.configuration.version
         version_strategy = X402::Versions.for(protocol_version)
 
@@ -83,18 +124,46 @@ module X402
           version: protocol_version,
           wallet_address: wallet_address,
           fee_payer: fee_payer,
-          accepts: accepts
+          accepts: accepts,
+          description: description
         )
 
         render_402_response(requirement_response, version_strategy)
       end
 
       def render_402_response(requirement_response, version_strategy)
+        # The version strategy's output declares whether this protocol version
+        # carries extensions (v2 emits the key, v1 does not).
+        discovery = x402_resolved_discovery_extensions
+        if discovery.present? && requirement_response.key?(:extensions)
+          requirement_response[:extensions] = discovery
+        end
+
         if version_strategy.requirement_header_name
           response.headers[version_strategy.requirement_header_name] =
             Base64.strict_encode64(requirement_response.to_json)
         end
+        # payment challenges are per-request and must not be cached
+        response.headers["Cache-Control"] = "no-store"
         render json: requirement_response, status: :payment_required
+      end
+
+      # Explicit x402_paywall(extensions:) wins over the class-level
+      # x402_discovery declaration for the current action. Either way the
+      # actual request method is stamped in, mirroring the reference server
+      # extension's request-time enrichment.
+      def x402_resolved_discovery_extensions
+        extension = @x402_paywall_extensions.presence || x402_declared_extension
+        return nil if extension.nil?
+
+        X402::DiscoveryExtension.with_method(extension, request.method)
+      end
+
+      def x402_declared_extension
+        config = x402_discovery_declarations[action_name&.to_sym] || x402_discovery_declarations[:__all__]
+        return nil if config.blank?
+
+        config[:extensions] || X402::DiscoveryExtension.declare(**config)
       end
 
       def render_configuration_error(message)
@@ -229,7 +298,6 @@ module X402
         payment_info = request.env["x402.payment"]
         return unless payment_info
 
-        ::Rails.logger.info("=== X402 Non-Optimistic Settlement (before response) ===")
         settlement_result = perform_settlement(payment_info)
 
         request.env["x402.settlement_result"] = settlement_result
@@ -238,12 +306,11 @@ module X402
 
       def perform_settlement(payment_info)
         begin
-          ::Rails.logger.info("=== X402 Settlement Attempt ===")
-          ::Rails.logger.info("Optimistic mode: #{X402.configuration.optimistic}")
-          ::Rails.logger.info("Payment payload class: #{payment_info[:payload].class}")
-          ::Rails.logger.info("Payment payload: #{payment_info[:payload].inspect}")
-          ::Rails.logger.info("Requirement class: #{payment_info[:requirement].class}")
-          ::Rails.logger.info("Requirement hash: #{payment_info[:requirement].to_h.inspect}")
+          X402.logger.debug do
+            "[x402] settling payment optimistic=#{X402.configuration.optimistic} " \
+              "payload=#{payment_info[:payload].inspect} " \
+              "requirement=#{payment_info[:requirement].to_h.inspect}"
+          end
 
           protocol_version = payment_info[:version] || X402.configuration.version
           version_strategy = X402::Versions.for(protocol_version)
@@ -256,14 +323,14 @@ module X402
 
           if settlement_result.success?
             response.headers[version_strategy.response_header_name] = settlement_result.to_base64
-            ::Rails.logger.info("x402 settlement successful: #{settlement_result.transaction}")
+            X402.logger.info("x402 settlement successful: #{settlement_result.transaction}")
           else
-            ::Rails.logger.error("x402 settlement failed: #{settlement_result.error_reason}")
+            X402.logger.error("x402 settlement failed: #{settlement_result.error_reason}")
           end
 
           settlement_result
-        rescue X402::FacilitatorError => e
-          ::Rails.logger.error("x402 settlement error: #{e.message}")
+        rescue X402::FacilitatorError, X402::InvalidPaymentError => e
+          X402.logger.error("x402 settlement error: #{e.message}")
           nil
         end
       end

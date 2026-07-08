@@ -75,7 +75,7 @@ RSpec.describe X402::RequirementGenerator do
         expect(requirement[:payTo]).to eq("0xRecipientWallet")
       end
 
-      it "does not include resource in individual requirements" do
+      it "keeps resource, description and mimeType out of individual requirements" do
         result = described_class.generate(amount: amount, resource: resource)
         requirement = result[:accepts].first
 
