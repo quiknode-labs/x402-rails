@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 - **Coinbase CDP facilitator auth** - Requests to `api.cdp.coinbase.com` carry the required Bearer JWT (ES256 and Ed25519 keys, no new dependencies). Credentials via `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET` or `config.cdp_api_key_id` / `config.cdp_api_key_secret`
 - **`FacilitatorClient#discovery_resources`** - Query a facilitator's discovery catalog
 - **`x402_payment_header` / `x402_payment_attempted?`** - Controller helpers for the version-appropriate payment header, for conditional paywall flows and idempotency fingerprints
-- `x402_paywall(extensions:)` for attaching a prebuilt extensions hash directly, and `x402_paywall(description:)` for the 402 `resource.description` facilitator catalogs display
+- `x402_discovery(description:)` sets the 402 `resource.description` facilitator catalogs display; `x402_paywall(extensions:)` attaches a prebuilt extensions hash directly
 
 ### Changed
 - 402 responses set `Cache-Control: no-store`

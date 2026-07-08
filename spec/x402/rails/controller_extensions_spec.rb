@@ -99,21 +99,41 @@ RSpec.describe X402::Rails::ControllerExtensions do
       expect(controller.x402_payment_header).to be_nil
       expect(controller.x402_payment_attempted?).to be(false)
     end
+
+    it "honors a per-endpoint version override" do
+      controller = harness_class.new
+      controller.request.headers["X-PAYMENT"] = "v1-payload"
+
+      expect(controller.x402_payment_header(version: 1)).to eq("v1-payload")
+      expect(controller.x402_payment_attempted?(version: 1)).to be(true)
+      expect(controller.x402_payment_attempted?).to be(false)
+    end
   end
 
-  describe "x402_paywall(description:)" do
-    it "sets the 402 resource description" do
+  describe "x402_discovery(description:)" do
+    it "sets the 402 resource description for the declared action" do
+      harness_class.x402_discovery(only: :create, description: "Weather data, paid per call")
       controller = harness_class.new
-      controller.x402_paywall(amount: 0.001, description: "Weather data, paid per call")
+
+      controller.x402_paywall(amount: 0.001)
 
       expect(decoded_header(controller).dig("resource", "description")).to eq("Weather data, paid per call")
     end
 
-    it "defaults to the generated description" do
+    it "defaults to the generated description when undeclared" do
       controller = harness_class.new
       controller.x402_paywall(amount: 0.001)
 
       expect(decoded_header(controller).dig("resource", "description")).to eq("Payment required for /api/v1/things")
+    end
+
+    it "does not make the route discoverable from a description alone" do
+      harness_class.x402_discovery(only: :create, description: "Named, not indexed")
+      controller = harness_class.new
+
+      controller.x402_paywall(amount: 0.001)
+
+      expect(decoded_header(controller)["extensions"]).to eq({})
     end
   end
 

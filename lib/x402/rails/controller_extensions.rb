@@ -21,9 +21,12 @@ module X402
         #                  output: { example: { "weather" => "foggy" } }
         #
         # Accepts either DiscoveryExtension.declare kwargs (as above) or a
-        # prebuilt hash via `extensions:`. Without `only:`, applies to every
-        # paywalled action in the controller. `method` defaults to the actual
-        # request method at render time.
+        # prebuilt hash via `extensions:`, plus `description:` for the 402's
+        # resource.description — the text facilitator catalogs display for the
+        # route. A description alone names the route without making it
+        # discoverable. Without `only:`, applies to every paywalled action in
+        # the controller. `method` is stamped from the actual request at render
+        # time.
         def x402_discovery(only: nil, **config)
           actions = only.nil? ? [:__all__] : Array(only).map(&:to_sym)
           self.x402_discovery_declarations = x402_discovery_declarations.merge(
@@ -40,7 +43,6 @@ module X402
         wallet_address = options[:wallet_address]
         fee_payer = options[:fee_payer]
         accepts = options[:accepts]
-        description = options[:description]
         @x402_paywall_extensions = options[:extensions]
 
         begin
@@ -59,8 +61,7 @@ module X402
             version: protocol_version,
             wallet_address: wallet_address,
             fee_payer: fee_payer,
-            accepts: accepts,
-            description: description
+            accepts: accepts
           )
         end
 
@@ -75,31 +76,31 @@ module X402
         )
       end
 
-      # The raw payment header for the configured protocol version, or nil
-      # when absent (or when the configured version is invalid).
-      def x402_payment_header
-        version_strategy = X402::Versions.for(X402.configuration.version)
+      # The raw payment header, or nil when absent (or when the version is
+      # invalid). Pass version: on endpoints that override it via
+      # x402_paywall(version:).
+      def x402_payment_header(version: nil)
+        version_strategy = X402::Versions.for(version || X402.configuration.version)
         request.headers[version_strategy.payment_header_name].presence
       rescue X402::ConfigurationError
         nil
       end
 
-      def x402_payment_attempted?
-        x402_payment_header.present?
+      def x402_payment_attempted?(version: nil)
+        x402_payment_header(version: version).present?
       end
 
       private
 
       def generate_payment_required_response(amount, error_message = nil,
                                               chain: nil, currency: nil, version: nil,
-                                              wallet_address: nil, fee_payer: nil, accepts: nil,
-                                              description: nil)
+                                              wallet_address: nil, fee_payer: nil, accepts: nil)
         protocol_version = version || X402.configuration.version
 
         requirement_response = X402::RequirementGenerator.generate(
           amount: amount,
           resource: request.original_url,
-          description: description || "Payment required for #{request.path}",
+          description: x402_declared_description || "Payment required for #{request.path}",
           chain: chain,
           currency: currency,
           version: protocol_version,
@@ -112,8 +113,7 @@ module X402
       end
 
       def render_payment_required(amount, chain: nil, currency: nil, version: nil,
-                                   wallet_address: nil, fee_payer: nil, accepts: nil,
-                                   description: nil)
+                                   wallet_address: nil, fee_payer: nil, accepts: nil)
         protocol_version = version || X402.configuration.version
         version_strategy = X402::Versions.for(protocol_version)
 
@@ -124,8 +124,7 @@ module X402
           version: protocol_version,
           wallet_address: wallet_address,
           fee_payer: fee_payer,
-          accepts: accepts,
-          description: description
+          accepts: accepts
         )
 
         render_402_response(requirement_response, version_strategy)
@@ -159,11 +158,25 @@ module X402
         X402::DiscoveryExtension.with_method(extension, request.method)
       end
 
+      # A description-only declaration just names the route; the extension is
+      # built only when I/O metadata (or a prebuilt hash) is declared.
       def x402_declared_extension
-        config = x402_discovery_declarations[action_name&.to_sym] || x402_discovery_declarations[:__all__]
+        config = x402_discovery_config
         return nil if config.blank?
+        return config[:extensions] if config[:extensions]
 
-        config[:extensions] || X402::DiscoveryExtension.declare(**config)
+        declare_kwargs = config.except(:description)
+        declare_kwargs.presence && X402::DiscoveryExtension.declare(**declare_kwargs)
+      end
+
+      # The catalog display text declared via x402_discovery(description:) —
+      # facilitators surface it from the 402's resource.description.
+      def x402_declared_description
+        x402_discovery_config&.dig(:description)
+      end
+
+      def x402_discovery_config
+        x402_discovery_declarations[action_name&.to_sym] || x402_discovery_declarations[:__all__]
       end
 
       def render_configuration_error(message)

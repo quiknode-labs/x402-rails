@@ -106,6 +106,17 @@ RSpec.describe X402::Rails::ControllerExtensions, "payment processing" do
   end
 
   describe "rejected payment" do
+    it "keeps the declared description on error 402s" do
+      harness_class.x402_discovery(only: :create, description: "Premium weather data")
+      stub_verify(isValid: false, invalidReason: "insufficient_funds")
+      controller = paywalled_controller(v2_payment_header)
+
+      controller.x402_paywall(amount: 0.001)
+
+      expect(controller.rendered_status).to eq(:payment_required)
+      expect(controller.rendered_json.dig(:resource, :description)).to eq("Premium weather data")
+    end
+
     it "renders 402 when the payment header cannot be decoded" do
       controller = paywalled_controller("not-valid-base64!")
 

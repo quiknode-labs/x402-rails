@@ -478,6 +478,7 @@ x402_paywall(amount: 0.005, extensions: my_extensions)
 
 - The example `input` **must validate against `input_schema`** — facilitators silently skip routes whose extension fails validation. Keep example and schema in sync.
 - `method` is stamped from the actual request at render time — omit it; a declared value is overwritten.
+- `description:` on `x402_discovery` sets the 402's `resource.description` — the text catalogs display for the route. A description alone just names the route; declaring input/output metadata is what makes it discoverable.
 - Catalogs are **per-facilitator** — an entry appears only in the catalog of the facilitator that settled the payment. To appear in both PayAI and CDP, settle at least one payment through each.
 - Indexing is a side-effect of a real payment; there is no registration API.
 
