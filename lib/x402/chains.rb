@@ -28,6 +28,22 @@ module X402
       currency: USDC_NAMED_USDC_V2,
     },
 
+    # --- Arbitrum ---
+    "arbitrum" => {
+      chain_id: 42161,
+      caip2: "eip155:42161",
+      usdc_address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      explorer_url: "https://arbiscan.io",
+      currency: USDC_NAMED_USD_COIN_V2,
+    },
+    "arbitrum-sepolia" => {
+      chain_id: 421614,
+      caip2: "eip155:421614",
+      usdc_address: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",
+      explorer_url: "https://sepolia.arbiscan.io",
+      currency: USDC_NAMED_USD_COIN_V2,
+    },
+
     # --- Polygon ---
     "polygon" => {
       chain_id: 137,
