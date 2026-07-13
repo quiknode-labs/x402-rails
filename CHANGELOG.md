@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.2.0] - Unreleased
 
 ### Added
+- **Arbitrum support** - Arbitrum One (`arbitrum`) and Arbitrum Sepolia (`arbitrum-sepolia`) join the built-in chain registry with native USDC defaults, supported by the Coinbase CDP facilitator
 - **Bazaar discovery** - `x402_discovery` controller macro declares discovery metadata per action; the extension is attached to every v2 402 the gem renders, echoed by paying clients, and indexed by facilitator catalogs (PayAI, Coinbase CDP Bazaar)
 - **`X402::DiscoveryExtension.declare`** - Builds the `extensions.bazaar` wire shape, matching `@x402/extensions` `declareDiscoveryExtension` (query and body forms)
 - **Coinbase CDP facilitator auth** - Requests to `api.cdp.coinbase.com` carry the required Bearer JWT (ES256 and Ed25519 keys, no new dependencies). Credentials via `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET` or `config.cdp_api_key_id` / `config.cdp_api_key_secret`

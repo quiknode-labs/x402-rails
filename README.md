@@ -8,7 +8,7 @@
 
 Accept instant blockchain micropayments in your Rails applications using the [x402 payment protocol](https://www.x402.org/).
 
-Supports 18 networks including Base, Polygon, Avalanche, Sei, Solana, and more.
+Supports 20 networks including Base, Arbitrum, Polygon, Avalanche, Sei, Solana, and more.
 
 ## Features
 
@@ -168,10 +168,10 @@ X402.configure do |config|
   config.facilitator = ENV.fetch("X402_FACILITATOR_URL", "https://www.x402.org/facilitator")
 
   # Blockchain network (default: "base-sepolia")
-  # Built-in: base, base-sepolia, polygon, polygon-amoy, avalanche, avalanche-fuji,
-  #           sei, sei-testnet, iotex, peaq, xlayer, xlayer-testnet,
-  #           skale-base, skale-base-sepolia, kiteai, kiteai-testnet,
-  #           solana, solana-devnet
+  # Built-in: base, base-sepolia, arbitrum, arbitrum-sepolia, polygon, polygon-amoy,
+  #           avalanche, avalanche-fuji, sei, sei-testnet, iotex, peaq,
+  #           xlayer, xlayer-testnet, skale-base, skale-base-sepolia,
+  #           kiteai, kiteai-testnet, solana, solana-devnet
   config.chain = ENV.fetch("X402_CHAIN", "base-sepolia")
 
   # Payment token (default: "USDC")
@@ -204,30 +204,30 @@ You can register custom EVM chains and tokens beyond the built-in options.
 
 #### Register a Custom Chain
 
-Add support for any EVM-compatible chain beyond the 18 built-in networks:
+Add support for any EVM-compatible chain beyond the 20 built-in networks:
 
 ```ruby
 X402.configure do |config|
   config.wallet_address = ENV['X402_WALLET_ADDRESS']
 
-  # Register Arbitrum (not built-in)
+  # Register Optimism (not built-in)
   config.register_chain(
-    name: "arbitrum",
-    chain_id: 42161,
+    name: "optimism",
+    chain_id: 10,
     standard: "eip155"
   )
 
   # Register the token for that chain
   config.register_token(
-    chain: "arbitrum",
+    chain: "optimism",
     symbol: "USDC",
-    address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+    address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
     decimals: 6,
     name: "USD Coin",
     version: "2"
   )
 
-  config.chain = "arbitrum"
+  config.chain = "optimism"
   config.currency = "USDC"
 end
 ```
@@ -279,11 +279,11 @@ X402.configure do |config|
   config.wallet_address = ENV['X402_WALLET_ADDRESS']
 
   # Register a custom chain not included in the built-in list
-  config.register_chain(name: "arbitrum", chain_id: 42161, standard: "eip155")
+  config.register_chain(name: "optimism", chain_id: 10, standard: "eip155")
   config.register_token(
-    chain: "arbitrum",
+    chain: "optimism",
     symbol: "USDC",
-    address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+    address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
     decimals: 6,
     name: "USD Coin",
     version: "2"
@@ -291,8 +291,8 @@ X402.configure do |config|
 
   # Accept payments on multiple chains (built-in + custom)
   config.accept(chain: "base-sepolia", currency: "USDC")
-  config.accept(chain: "polygon-amoy", currency: "USDC")
-  config.accept(chain: "arbitrum", currency: "USDC")
+  config.accept(chain: "arbitrum-sepolia", currency: "USDC")
+  config.accept(chain: "optimism", currency: "USDC")
 end
 ```
 
@@ -302,7 +302,7 @@ When `config.accept()` is used, the 402 response will include all accepted payme
 {
   "accepts": [
     { "network": "eip155:84532", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e", ... },
-    { "network": "eip155:80002", "asset": "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582", ... }
+    { "network": "eip155:421614", "asset": "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", ... }
   ]
 }
 ```
@@ -499,6 +499,8 @@ Any x402 facilitator works via `X402_FACILITATOR_URL` / `config.facilitator`. Au
 | x402.org (default) | `https://www.x402.org/facilitator` | none |
 | PayAI | `https://facilitator.payai.network` | none |
 | Coinbase CDP | `https://api.cdp.coinbase.com/platform/v2/x402` | Bearer JWT, built in |
+
+> **Note:** Not every facilitator settles every chain — check your facilitator's `/supported` endpoint. For example, Arbitrum One and Arbitrum Sepolia are supported by the Coinbase CDP facilitator, while the default x402.org facilitator covers testnets like Base Sepolia.
 
 ### Using Coinbase CDP
 

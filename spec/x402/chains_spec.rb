@@ -22,6 +22,27 @@ RSpec.describe X402, "chains" do
       )
     end
 
+    it "includes arbitrum mainnet configuration" do
+      expect(X402::CHAINS["arbitrum"]).to include(
+        chain_id: 42161,
+        usdc_address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        explorer_url: "https://arbiscan.io"
+      )
+    end
+
+    it "includes arbitrum-sepolia configuration" do
+      expect(X402::CHAINS["arbitrum-sepolia"]).to include(
+        chain_id: 421614,
+        usdc_address: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",
+        explorer_url: "https://sepolia.arbiscan.io"
+      )
+    end
+
+    it "uses the on-chain USDC domain for arbitrum chains" do
+      expect(X402::CHAINS["arbitrum"][:currency]).to include(name: "USD Coin", version: "2")
+      expect(X402::CHAINS["arbitrum-sepolia"][:currency]).to include(name: "USD Coin", version: "2")
+    end
+
     it "includes avalanche-fuji configuration" do
       expect(X402::CHAINS["avalanche-fuji"]).to include(
         chain_id: 43113,
@@ -124,6 +145,11 @@ RSpec.describe X402, "chains" do
       expect(X402.usdc_address_for("polygon")).to eq("0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359")
     end
 
+    it "returns USDC address for arbitrum" do
+      expect(X402.usdc_address_for("arbitrum")).to eq("0xaf88d065e77c8cC2239327C5EDb3A432268e5831")
+      expect(X402.usdc_address_for("arbitrum-sepolia")).to eq("0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d")
+    end
+
     it "returns nil for unsupported chain" do
       expect(X402.usdc_address_for("ethereum")).to be_nil
     end
@@ -153,6 +179,8 @@ RSpec.describe X402, "chains" do
       expect(X402.to_caip2("base-sepolia")).to eq("eip155:84532")
       expect(X402.to_caip2("base")).to eq("eip155:8453")
       expect(X402.to_caip2("avalanche")).to eq("eip155:43114")
+      expect(X402.to_caip2("arbitrum")).to eq("eip155:42161")
+      expect(X402.to_caip2("arbitrum-sepolia")).to eq("eip155:421614")
     end
 
     it "converts custom chains to CAIP-2 format" do
@@ -175,6 +203,8 @@ RSpec.describe X402, "chains" do
       expect(X402.from_caip2("eip155:84532")).to eq("base-sepolia")
       expect(X402.from_caip2("eip155:8453")).to eq("base")
       expect(X402.from_caip2("eip155:43114")).to eq("avalanche")
+      expect(X402.from_caip2("eip155:42161")).to eq("arbitrum")
+      expect(X402.from_caip2("eip155:421614")).to eq("arbitrum-sepolia")
     end
 
     it "converts custom chain CAIP-2 format to chain name" do

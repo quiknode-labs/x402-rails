@@ -13,7 +13,8 @@ X402.configure do |config|
   config.facilitator = ENV.fetch("X402_FACILITATOR_URL", "https://www.x402.org/facilitator")
 
   # Blockchain network to use
-  # Options: "base-sepolia" (testnet), "base" (mainnet), "avalanche-fuji" (testnet), "avalanche" (mainnet)
+  # Options: "base-sepolia" (testnet), "base" (mainnet), "arbitrum-sepolia" (testnet),
+  #          "arbitrum" (mainnet), "avalanche-fuji" (testnet), "avalanche" (mainnet)
   # For testing, use "base-sepolia". For production, use "base" (no fees!)
   config.chain = ENV.fetch("X402_CHAIN", "base-sepolia")
 
