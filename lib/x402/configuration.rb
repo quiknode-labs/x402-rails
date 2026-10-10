@@ -51,7 +51,7 @@ module X402
     end
 
     def register_token(chain:, symbol:, address:, decimals:, name:, version: "1")
-      if chain.to_s.start_with?("solana")
+      if chain.to_s.start_with?("solana") || X402.nano_chain?(chain.to_s)
         raise ConfigurationError, "Custom tokens are only supported on EVM chains"
       end
 

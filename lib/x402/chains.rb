@@ -9,6 +9,10 @@ module X402
   USDC_NAMED_USDC = { symbol: "USDC", decimals: 6, name: "USDC", version: nil }.freeze
   USDC_NAMED_USD_COIN = { symbol: "USDC", decimals: 6, name: "USD Coin", version: nil }.freeze
 
+  # Nano has no token contracts: the asset is the native coin, XNO.
+  # Amounts are integers in raw (10^30 raw = 1 XNO).
+  XNO_NATIVE = { symbol: "XNO", decimals: 30, name: "Nano", version: nil }.freeze
+
   # Unified chain registry — single source of truth for all chain metadata.
   # Each entry contains: chain_id, caip2, currency, and optionally usdc_address, explorer_url, fee_payer.
   CHAINS = {
@@ -166,6 +170,13 @@ module X402
       fee_payer: "CKPKJWNdJEqa81x7CkZ14BVPiY6y16Sxs7owznqtWYp5",
       currency: USDC_NAMED_USDC,
     },
+
+    # --- Nano (XNO, native coin, no fee payer) ---
+    "nano" => {
+      caip2: "nano:mainnet",
+      explorer_url: "https://nanolooker.com",
+      currency: XNO_NATIVE,
+    },
   }.freeze
 
   # Derived lookups for backwards compatibility
@@ -200,6 +211,8 @@ module X402
     def asset_address_for(chain_name, symbol = nil)
       symbol ||= X402.configuration.currency
 
+      return XNO_NATIVE[:symbol] if nano_native?(chain_name, symbol)
+
       custom = X402.configuration.token_config(chain_name, symbol)
       return custom[:address] if custom
 
@@ -217,8 +230,9 @@ module X402
       custom = X402.configuration.token_config(chain_name, symbol)
       return custom if custom
 
+      # The built-in currency (USDC, or XNO on nano) is only returned for its own symbol.
       config = CHAINS[chain_name]
-      if symbol.upcase == "USDC" && config&.dig(:currency)
+      if config && symbol.upcase == config[:currency][:symbol]
         config[:currency]
       else
         raise ConfigurationError, "Unknown token #{symbol} for chain #{chain_name}. Register with config.register_token()"
@@ -273,6 +287,18 @@ module X402
 
     def solana_chain?(chain_name)
       SOLANA_CHAINS.include?(chain_name)
+    end
+
+    NANO_CHAINS = %w[nano].freeze
+
+    def nano_chain?(chain_name)
+      NANO_CHAINS.include?(chain_name)
+    end
+
+    private
+
+    def nano_native?(chain_name, symbol)
+      nano_chain?(chain_name) && symbol.upcase == XNO_NATIVE[:symbol]
     end
   end
 end

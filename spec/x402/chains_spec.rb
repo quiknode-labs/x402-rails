@@ -136,7 +136,7 @@ RSpec.describe X402, "chains" do
     end
 
     it "returns same decimals for all built-in USDC chains" do
-      X402::CHAINS.keys.each do |chain|
+      X402::CHAINS.select { |_, c| c[:currency][:symbol] == "USDC" }.each_key do |chain|
         expect(X402.currency_decimals_for_chain(chain)).to eq(6)
       end
     end

@@ -40,6 +40,7 @@ module X402
 
     def self.build_formatted_requirement(amount:, resource:, description:, chain:, currency:,
                                          wallet_address:, fee_payer:, version_strategy:)
+      validate_pay_to!(chain, wallet_address)
       token_config = X402.token_config_for(chain, currency)
       asset_address = X402.asset_address_for(chain, currency)
       atomic_amount = convert_to_atomic(amount, token_config[:decimals])
@@ -79,12 +80,25 @@ module X402
       end
     end
 
+    # Above 15 decimals a Float cannot hold the result exactly (XNO has 30),
+    # so those amounts are converted with BigDecimal.
     def self.convert_to_atomic(amount, decimals)
+      return (BigDecimal(amount.to_s) * (10**decimals)).to_i if decimals > 15
+
       (amount.to_f * (10**decimals)).to_i
     end
 
+    def self.validate_pay_to!(chain, wallet_address)
+      return unless X402.nano_chain?(chain)
+      return if NanoAddress.valid?(wallet_address)
+
+      raise ConfigurationError, "Invalid Nano address for #{chain}: #{wallet_address.inspect}"
+    end
+
     def self.build_extra_data(chain_name, token_config, fee_payer_override)
-      if X402.solana_chain?(chain_name)
+      if X402.nano_chain?(chain_name)
+        nil
+      elsif X402.solana_chain?(chain_name)
         fee_payer = fee_payer_override || X402.fee_payer_for(chain_name)
         { feePayer: fee_payer }
       else

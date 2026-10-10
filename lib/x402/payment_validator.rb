@@ -34,6 +34,11 @@ module X402
         if payment_value < required_value
           return validation_error("Insufficient amount: expected at least #{required_value}, got #{payment_value}")
         end
+      elsif payment_payload.nano_chain?
+        # Nano: the facilitator checks the block (recipient, amount, confirmation)
+        if payment_payload.payload.blank?
+          return validation_error("Nano payment missing payload")
+        end
       else
         # Solana: verify transaction payload exists
         unless payment_payload.transaction

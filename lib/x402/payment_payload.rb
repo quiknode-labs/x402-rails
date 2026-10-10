@@ -39,8 +39,12 @@ module X402
       X402.solana_chain?(network)
     end
 
+    def nano_chain?
+      X402.nano_chain?(network)
+    end
+
     def evm_chain?
-      !solana_chain?
+      !solana_chain? && !nano_chain?
     end
 
     def transaction

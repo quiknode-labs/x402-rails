@@ -171,7 +171,7 @@ X402.configure do |config|
   # Built-in: base, base-sepolia, polygon, polygon-amoy, avalanche, avalanche-fuji,
   #           sei, sei-testnet, iotex, peaq, xlayer, xlayer-testnet,
   #           skale-base, skale-base-sepolia, kiteai, kiteai-testnet,
-  #           solana, solana-devnet
+  #           solana, solana-devnet, nano
   config.chain = ENV.fetch("X402_CHAIN", "base-sepolia")
 
   # Payment token (default: "USDC")
@@ -317,6 +317,18 @@ config.accept(chain: "polygon-amoy", currency: "USDC", wallet_address: "0xWallet
 ```
 
 **Fallback behavior:** If no `config.accept()` calls are made, the default `config.chain` and `config.currency` are used.
+
+### Nano (XNO)
+
+`nano` (CAIP-2 `nano:mainnet`) can be offered beside your other chains. Nano has no token contracts, so the asset
+is the native coin, `XNO`, and amounts are integers in raw (10^30 raw = 1 XNO). The `payTo` must be a valid
+`nano_` address; its Blake2b checksum is checked when the 402 is built, so a mistyped address raises a
+`ConfigurationError` instead of being published. The facilitator you use must support the `nano:mainnet` exact scheme.
+
+```ruby
+config.accept(chain: "base", currency: "USDC", wallet_address: "0xWallet1")
+config.accept(chain: "nano", currency: "XNO", wallet_address: "nano_3t6k35gi95xu6tergt6p69ck76ogmitsa8mnijtpxm9fkcm736xtoncuohr3")
+```
 
 ## Protocol Versions
 
